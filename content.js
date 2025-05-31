@@ -162,7 +162,35 @@ class NavigationElementDetector {
                 return;
             }
             
-            // Check position and direction match
+            // Check if this is a lightbox element (more flexible positioning)
+            const isLightboxElement = this.isLightboxElement(element, elementText);
+            
+            if (isLightboxElement) {
+                this.debugLog(`🎯 Lightbox element detected: "${elementText}" - using flexible positioning`);
+                
+                if (navigationDirection === 'previous') {
+                    this.debugLog(`✅ Previous lightbox element added: "${elementText}"`);
+                    candidates.previous.push({
+                        element,
+                        text: elementText,
+                        score: this.calculateElementScore(element, elementText, 'previous') + 15, // Bonus for lightbox
+                        rect,
+                        centerY: elementCenterY
+                    });
+                } else if (navigationDirection === 'next') {
+                    this.debugLog(`✅ Next lightbox element added: "${elementText}"`);
+                    candidates.next.push({
+                        element,
+                        text: elementText,
+                        score: this.calculateElementScore(element, elementText, 'next') + 15, // Bonus for lightbox
+                        rect,
+                        centerY: elementCenterY
+                    });
+                }
+                return;
+            }
+            
+            // Standard position-based detection for non-lightbox elements
             if (navigationDirection === 'previous' && this.isInZone(elementCenterX, leftZone)) {
                 this.debugLog(`✅ Previous element added: "${elementText}"`);
                 candidates.previous.push({
@@ -352,6 +380,35 @@ class NavigationElementDetector {
         if (this.debugMode) {
             console.log(`[Navigation Detector Debug] ${message}`);
         }
+    }
+
+    /**
+     * Determines if an element is a lightbox navigation element
+     */
+    isLightboxElement(element, elementText) {
+        // Check for lightbox-specific indicators
+        const lightboxIndicators = [
+            // Aria labels
+            elementText.includes('next page'),
+            elementText.includes('previous page'),
+            elementText.includes('lightbox'),
+            
+            // SVG icons
+            elementText.includes('right-fill'),
+            elementText.includes('left-fill'),
+            
+            // Element context
+            element.closest('[class*="lightbox"]') !== null,
+            element.closest('[class*="modal"]') !== null,
+            element.closest('[class*="overlay"]') !== null,
+            element.closest('[role="dialog"]') !== null,
+            
+            // Check for SVG navigation icons
+            element.querySelector('svg[icon-name*="fill"]') !== null,
+            element.querySelector('svg[icon-name*="arrow"]') !== null
+        ];
+        
+        return lightboxIndicators.some(indicator => indicator);
     }
 }
 
