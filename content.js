@@ -142,16 +142,29 @@ class NavigationElementDetector {
             const elementCenterX = rect.left + rect.width / 2;
             const elementCenterY = rect.top + rect.height / 2;
             
-            // Check if element is in vertical middle zone
-            if (Math.abs(elementCenterY - middleY) > verticalTolerance) {
-                return;
-            }
-            
             const elementText = this.getElementText(element);
             const navigationDirection = this.determineNavigationDirection(element, elementText);
             
+            // Debug every element that has navigation direction
+            if (navigationDirection) {
+                this.debugLog(`Found ${navigationDirection} element: "${elementText}"`);
+                this.debugLog(`Position: X=${elementCenterX.toFixed(1)}, Y=${elementCenterY.toFixed(1)}`);
+                this.debugLog(`Left zone: ${leftZone.x}-${leftZone.x + leftZone.width}, Right zone: ${rightZone.x}-${rightZone.x + rightZone.width}`);
+                this.debugLog(`Middle Y: ${middleY.toFixed(1)}, Tolerance: ±${verticalTolerance.toFixed(1)}`);
+                this.debugLog(`Vertical check: ${Math.abs(elementCenterY - middleY).toFixed(1)} <= ${verticalTolerance.toFixed(1)} = ${Math.abs(elementCenterY - middleY) <= verticalTolerance}`);
+            }
+            
+            // Check if element is in vertical middle zone
+            if (Math.abs(elementCenterY - middleY) > verticalTolerance) {
+                if (navigationDirection) {
+                    this.debugLog(`❌ ${navigationDirection} element filtered out: not in vertical middle zone`);
+                }
+                return;
+            }
+            
             // Check position and direction match
             if (navigationDirection === 'previous' && this.isInZone(elementCenterX, leftZone)) {
+                this.debugLog(`✅ Previous element added: "${elementText}"`);
                 candidates.previous.push({
                     element,
                     text: elementText,
@@ -160,6 +173,7 @@ class NavigationElementDetector {
                     centerY: elementCenterY
                 });
             } else if (navigationDirection === 'next' && this.isInZone(elementCenterX, rightZone)) {
+                this.debugLog(`✅ Next element added: "${elementText}"`);
                 candidates.next.push({
                     element,
                     text: elementText,
@@ -167,6 +181,11 @@ class NavigationElementDetector {
                     rect,
                     centerY: elementCenterY
                 });
+            } else if (navigationDirection) {
+                this.debugLog(`❌ ${navigationDirection} element filtered out: not in correct horizontal zone`);
+                if (navigationDirection === 'next') {
+                    this.debugLog(`Element X: ${elementCenterX.toFixed(1)}, Right zone starts at: ${rightZone.x.toFixed(1)}`);
+                }
             }
         });
         
@@ -195,14 +214,21 @@ class NavigationElementDetector {
             element.querySelector('[aria-label]')?.getAttribute('aria-label')
         ];
         
-        // Check for SVG icons with direction indicators
-        const svgElement = element.querySelector('svg[icon-name]') || (element.tagName === 'SVG' ? element : null);
-        if (svgElement) {
-            const iconName = svgElement.getAttribute('icon-name');
+        // Check for SVG icons with direction indicators - improved detection
+        const svgElements = element.querySelectorAll('svg[icon-name]');
+        svgElements.forEach(svg => {
+            const iconName = svg.getAttribute('icon-name');
             if (iconName) {
                 textSources.push(iconName);
                 this.debugLog(`Found SVG icon: ${iconName}`);
             }
+        });
+        
+        // Also check if the element itself is an SVG
+        if (element.tagName === 'SVG' && element.getAttribute('icon-name')) {
+            const iconName = element.getAttribute('icon-name');
+            textSources.push(iconName);
+            this.debugLog(`Found direct SVG icon: ${iconName}`);
         }
         
         // Check for other icon indicators
@@ -219,8 +245,9 @@ class NavigationElementDetector {
             if (iconClass) textSources.push(iconClass);
         });
         
-        const text = textSources.find(text => text && text.length > 0) || '';
-        return text.toLowerCase().replace(/\s+/g, ' ');
+        const text = textSources.filter(t => t && t.length > 0).join(' ').toLowerCase().replace(/\s+/g, ' ');
+        this.debugLog(`Element text extracted: "${text}" from element: ${element.tagName}.${element.className}`);
+        return text;
     }
 
     /**
