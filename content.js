@@ -7,12 +7,18 @@ class NavigationElementDetector {
     constructor() {
         this.nextPageKeywords = [
             'next', 'forward', 'continue', 'more', 'older', 'right',
-            '→', '▶', '►', '▷', '⇨', '⇾', '→', '>'
+            '→', '▶', '►', '▷', '⇨', '⇾', '→', '>',
+            // Lightbox and icon-specific terms
+            'right-fill', 'right-arrow', 'arrow-right', 'chevron-right',
+            'next-arrow', 'forward-arrow', 'lightbox-next'
         ];
         
         this.previousPageKeywords = [
             'prev', 'previous', 'back', 'newer', 'left',
-            '←', '◀', '◄', '◁', '⇦', '⇽', '←', '<'
+            '←', '◀', '◄', '◁', '⇦', '⇽', '←', '<',
+            // Lightbox and icon-specific terms  
+            'left-fill', 'left-arrow', 'arrow-left', 'chevron-left',
+            'prev-arrow', 'back-arrow', 'lightbox-prev'
         ];
         
         this.detectedNavigationElements = {
@@ -83,7 +89,16 @@ class NavigationElementDetector {
             'input[type="submit"]',
             '[tabindex="0"]',
             '[data-toggle]',
-            '[data-action]'
+            '[data-action]',
+            // Lightbox and interactive element selectors
+            'svg[icon-name]',
+            '[class*="lightbox"]',
+            '[class*="modal"]',
+            '[class*="overlay"]',
+            'div[onclick]',
+            'span[onclick]',
+            '[style*="cursor: pointer"]',
+            '[style*="cursor:pointer"]'
         ];
         
         const elements = [];
@@ -166,7 +181,7 @@ class NavigationElementDetector {
     }
 
     /**
-     * Extracts meaningful text from an element including aria-label, title, etc.
+     * Extracts text content and icon information from an element
      */
     getElementText(element) {
         const textSources = [
@@ -179,6 +194,30 @@ class NavigationElementDetector {
             element.querySelector('img')?.getAttribute('alt'),
             element.querySelector('[aria-label]')?.getAttribute('aria-label')
         ];
+        
+        // Check for SVG icons with direction indicators
+        const svgElement = element.querySelector('svg[icon-name]') || (element.tagName === 'SVG' ? element : null);
+        if (svgElement) {
+            const iconName = svgElement.getAttribute('icon-name');
+            if (iconName) {
+                textSources.push(iconName);
+                this.debugLog(`Found SVG icon: ${iconName}`);
+            }
+        }
+        
+        // Check for other icon indicators
+        const iconSources = [
+            element.querySelector('[class*="arrow"]')?.className,
+            element.querySelector('[class*="chevron"]')?.className,
+            element.querySelector('[class*="next"]')?.className,
+            element.querySelector('[class*="prev"]')?.className,
+            element.querySelector('[class*="right"]')?.className,
+            element.querySelector('[class*="left"]')?.className
+        ];
+        
+        iconSources.forEach(iconClass => {
+            if (iconClass) textSources.push(iconClass);
+        });
         
         const text = textSources.find(text => text && text.length > 0) || '';
         return text.toLowerCase().replace(/\s+/g, ' ');
