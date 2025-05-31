@@ -562,6 +562,8 @@ class SmartNavigationKeyBinder {
         this.retryCount = 0;
         this.maxRetries = 3;
         this.debugMode = false;
+        this.mutationObserver = null;
+        this.reinitializeTimeout = null;
     }
 
     /**
@@ -581,6 +583,9 @@ class SmartNavigationKeyBinder {
             
             // Bind keys to detected elements
             this.bindNavigationKeys(navigationElements);
+            
+            // Start watching for DOM changes (lightbox expansions, etc.)
+            this.startDOMWatcher();
             
             this.isInitialized = true;
             console.log('[Side Scroller] Initialization complete');
@@ -661,6 +666,20 @@ class SmartNavigationKeyBinder {
      * Cleans up all bindings and state
      */
     cleanup() {
+        // Stop DOM watching
+        if (this.mutationObserver) {
+            this.mutationObserver.disconnect();
+            this.mutationObserver = null;
+            this.debugLog('DOM watcher stopped');
+        }
+
+        // Clear any pending reinitialization
+        if (this.reinitializeTimeout) {
+            clearTimeout(this.reinitializeTimeout);
+            this.reinitializeTimeout = null;
+        }
+
+        // Clean up key bindings
         this.keyManager.unbindAllKeys();
         this.detector.detectedNavigationElements = { nextPage: null, previousPage: null };
         console.log('[Side Scroller] Cleanup complete');
@@ -674,6 +693,109 @@ class SmartNavigationKeyBinder {
         this.detector.debugMode = true;
         this.keyManager.debugMode = true;
         console.log('[Side Scroller] Debug mode enabled');
+    }
+
+    /**
+     * Starts watching for DOM changes that might affect navigation detection
+     */
+    startDOMWatcher() {
+        if (this.mutationObserver) {
+            this.mutationObserver.disconnect();
+        }
+
+        this.mutationObserver = new MutationObserver((mutations) => {
+            let shouldReinitialize = false;
+
+            mutations.forEach((mutation) => {
+                // Check for added/removed nodes (lightbox content changes)
+                if (mutation.type === 'childList') {
+                    const addedNodes = Array.from(mutation.addedNodes);
+                    const removedNodes = Array.from(mutation.removedNodes);
+                    
+                    // Check if lightbox-related elements were added/removed
+                    const hasLightboxChanges = [...addedNodes, ...removedNodes].some(node => {
+                        if (node.nodeType !== Node.ELEMENT_NODE) return false;
+                        
+                        return this.isLightboxRelatedElement(node);
+                    });
+
+                    if (hasLightboxChanges) {
+                        this.debugLog('DOM change detected: Lightbox content added/removed');
+                        shouldReinitialize = true;
+                    }
+                }
+
+                // Check for attribute changes (class changes, style changes)
+                if (mutation.type === 'attributes') {
+                    const target = mutation.target;
+                    
+                    // Check for class or style changes that might indicate lightbox state change
+                    if ((mutation.attributeName === 'class' || mutation.attributeName === 'style') &&
+                        this.isLightboxRelatedElement(target)) {
+                        this.debugLog(`DOM change detected: ${mutation.attributeName} changed on lightbox element`);
+                        shouldReinitialize = true;
+                    }
+                }
+            });
+
+            if (shouldReinitialize) {
+                this.scheduleReinitialize();
+            }
+        });
+
+        // Start observing
+        this.mutationObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style', 'aria-hidden', 'data-state']
+        });
+
+        this.debugLog('DOM watcher started - monitoring for lightbox changes');
+    }
+
+    /**
+     * Checks if an element is related to lightbox functionality
+     */
+    isLightboxRelatedElement(element) {
+        if (!element || !element.tagName) return false;
+
+        const lightboxSelectors = [
+            '[class*="lightbox"]',
+            '[class*="modal"]', 
+            '[class*="overlay"]',
+            '[class*="dialog"]',
+            '[role="dialog"]',
+            '[aria-label*="lightbox"]',
+            'svg[icon-name*="fill"]',
+            'button[aria-label*="page"]',
+            '[class*="carousel"]',
+            '[class*="gallery"]'
+        ];
+
+        return lightboxSelectors.some(selector => {
+            try {
+                return element.matches(selector) || element.querySelector(selector);
+            } catch (e) {
+                return false;
+            }
+        });
+    }
+
+    /**
+     * Schedules a reinitialization with debouncing to avoid too frequent updates
+     */
+    scheduleReinitialize() {
+        // Clear any existing timeout
+        if (this.reinitializeTimeout) {
+            clearTimeout(this.reinitializeTimeout);
+        }
+
+        // Schedule reinitialization after a short delay
+        this.reinitializeTimeout = setTimeout(() => {
+            this.debugLog('Reinitializing due to DOM changes...');
+            this.reinitialize();
+        }, 500); // 500ms delay to debounce rapid changes
     }
 }
 
