@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Smart Navigation Key Binder",
+  "version": "1.0.0",
+  "description": "Automatically binds arrow keys to page navigation elements for enhanced browsing experience",
+  
+  "permissions": [
+    "activeTab"
+  ],
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Smart Navigation Key Binder"
+  },
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+} 

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Navigation Key Binder</title>
+    <style>
+        body {
+            width: 350px;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .header p {
+            margin: 0;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .status-section {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-indicator {
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-bound {
+            background: rgba(76, 175, 80, 0.8);
+            color: white;
+        }
+
+        .status-not-bound {
+            background: rgba(255, 193, 7, 0.8);
+            color: #333;
+        }
+
+        .status-not-detected {
+            background: rgba(244, 67, 54, 0.8);
+            color: white;
+        }
+
+        .controls-section {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+        }
+
+        .control-button:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .control-button:active {
+            transform: translateY(0);
+        }
+
+        .info-section {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .arrow-indicator {
+            font-size: 16px;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏹 Smart Navigation</h1>
+        <p>Arrow Key Binder for Web Navigation</p>
+    </div>
+
+    <div id="loading" class="loading">
+        <div class="loading-spinner"></div>
+        <p>Checking current page...</p>
+    </div>
+
+    <div id="main-content" style="display: none;">
+        <div class="status-section">
+            <div class="status-item">
+                <span class="status-label">
+                    <span class="arrow-indicator">←</span>Left Arrow (Previous)
+                </span>
+                <span id="left-arrow-status" class="status-indicator">Loading...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">
+                    <span class="arrow-indicator">→</span>Right Arrow (Next)
+                </span>
+                <span id="right-arrow-status" class="status-indicator">Loading...</span>
+            </div>
+        </div>
+
+        <div class="controls-section">
+            <button id="refresh-btn" class="control-button">
+                🔄 Refresh Detection
+            </button>
+            <button id="debug-btn" class="control-button">
+                🐛 Toggle Debug Mode
+            </button>
+        </div>
+
+        <div class="info-section">
+            <strong>How it works:</strong>
+            <br>• Detects navigation elements on far left/right of page
+            <br>• Binds arrow keys only if not already in use
+            <br>• Works on most websites with pagination
+            <br>• Automatically detects SPA navigation changes
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html> 
