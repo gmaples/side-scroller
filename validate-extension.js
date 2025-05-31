@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Chrome Extension Validation Script
- * Validates the structure and content of the Smart Navigation Key Binder extension
+ * Extension Validation Script
+ * Validates the structure and content of the Side Scroller extension
  */
 
 const fs = require('fs');

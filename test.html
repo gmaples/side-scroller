@@ -3,444 +3,474 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Navigation Key Binder Test Page</title>
+    <title>Side Scroller - Test Page</title>
     <style>
         body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 20px;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             min-height: 100vh;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow: hidden;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
             text-align: center;
+            margin-bottom: 40px;
         }
 
         .header h1 {
-            margin: 0 0 10px 0;
             font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
         .header p {
-            margin: 0;
+            font-size: 1.2em;
             opacity: 0.9;
-            font-size: 1.1em;
-        }
-
-        .content {
-            padding: 40px;
-            min-height: 400px;
-        }
-
-        .test-section {
             margin-bottom: 30px;
-            padding: 20px;
-            border-radius: 8px;
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
         }
 
-        .test-section h3 {
-            margin-top: 0;
-            color: #333;
+        /* Navigation Buttons - Positioned for Extension Detection */
+        .nav-button {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 15px 25px;
+            font-size: 18px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
         }
 
-        .nav-demo {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 20px 0;
-            padding: 15px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        .nav-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-50%) scale(1.05);
         }
 
-        /* Previous navigation button (far left, middle vertically) */
         .nav-previous {
-            position: fixed;
             left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #28a745;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            font-size: 24px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-            transition: all 0.3s ease;
-            z-index: 1000;
         }
 
-        .nav-previous:hover {
-            background: #218838;
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        /* Next navigation button (far right, middle vertically) */
         .nav-next {
-            position: fixed;
             right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            font-size: 24px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
-            transition: all 0.3s ease;
-            z-index: 1000;
         }
 
-        .nav-next:hover {
-            background: #0056b3;
-            transform: translateY(-50%) scale(1.1);
+        /* Status Dashboard */
+        .status-dashboard {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .inline-nav {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
         }
 
-        .inline-nav a {
-            padding: 10px 20px;
-            background: #6c757d;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background 0.3s ease;
-        }
-
-        .inline-nav a:hover {
-            background: #545b62;
-        }
-
-        .status-indicator {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
-            color: white;
+        .status-item {
+            background: rgba(255, 255, 255, 0.1);
             padding: 15px;
-            border-radius: 8px;
-            z-index: 1001;
-            font-family: monospace;
-            font-size: 12px;
-            max-width: 300px;
+            border-radius: 10px;
+            text-align: center;
         }
 
-        .instructions {
-            background: #e3f2fd;
-            border: 1px solid #2196f3;
+        .status-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .status-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        /* Test Controls */
+        .test-controls {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .test-button {
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 8px;
-            padding: 20px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .test-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Instructions */
+        .instructions {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            color: #ffd700;
+        }
+
+        .instructions ol {
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        /* Dynamic Elements Container */
+        .dynamic-container {
+            position: relative;
+            min-height: 100px;
             margin: 20px 0;
         }
 
-        .instructions h4 {
-            margin-top: 0;
-            color: #1976d2;
+        /* Log Output */
+        .log-output {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .key-demo {
-            display: inline-block;
-            background: #333;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-family: monospace;
-            margin: 0 5px;
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
         }
 
-        .pagination-demo {
-            text-align: center;
-            margin: 30px 0;
+        .log-timestamp {
+            color: #888;
+            margin-right: 10px;
         }
 
-        .pagination-demo a {
-            display: inline-block;
-            padding: 8px 12px;
-            margin: 0 5px;
-            background: #f8f9fa;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            border: 1px solid #dee2e6;
-        }
-
-        .pagination-demo a:hover {
-            background: #e9ecef;
-        }
-
-        .pagination-demo .current {
-            background: #007bff;
-            color: white;
-            border-color: #007bff;
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-button {
+                padding: 12px 20px;
+                font-size: 16px;
+            }
+            
+            .nav-previous {
+                left: 10px;
+            }
+            
+            .nav-next {
+                right: 10px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Fixed navigation buttons positioned for extension detection -->
-    <button class="nav-previous" onclick="simulateNavigation('previous')" title="Previous Page" rel="prev">
-        ◀
+    <!-- Fixed Navigation Buttons (For Extension Detection) -->
+    <button class="nav-button nav-previous" onclick="navigateTo('previous')">
+        ← Previous
     </button>
-
-    <button class="nav-next" onclick="simulateNavigation('next')" title="Next Page" rel="next">
-        ▶
+    
+    <button class="nav-button nav-next" onclick="navigateTo('next')">
+        Next →
     </button>
-
-    <!-- Status indicator -->
-    <div class="status-indicator" id="statusIndicator">
-        <strong>Smart Navigation Test Page</strong><br>
-        Extension Status: <span id="extensionStatus">Checking...</span><br>
-        Left Arrow: <span id="leftArrowStatus">Unknown</span><br>
-        Right Arrow: <span id="rightArrowStatus">Unknown</span>
-    </div>
 
     <div class="container">
+        <!-- Header -->
         <div class="header">
-            <h1>🏹 Navigation Key Binder</h1>
-            <p>Comprehensive Test Page for Chrome Extension</p>
+            <h1>🎮 Side Scroller Test Page</h1>
+            <p>Test environment for the Side Scroller Chrome extension</p>
         </div>
 
-        <div class="content">
-            <div class="instructions">
-                <h4>📋 Test Instructions</h4>
-                <ol>
-                    <li>Install the Smart Navigation Key Binder Chrome extension</li>
-                    <li>Look for the fixed navigation buttons on the far left and right sides of the page</li>
-                    <li>Try pressing <span class="key-demo">←</span> and <span class="key-demo">→</span> arrow keys</li>
-                    <li>The extension should bind these keys to the navigation buttons</li>
-                    <li>Check the extension popup to see detection status</li>
-                </ol>
-            </div>
-
-            <div class="test-section">
-                <h3>🎯 Primary Test Cases</h3>
-                <p><strong>Expected Behavior:</strong></p>
-                <ul>
-                    <li>Extension should detect the "Previous" button (◀) on the far left</li>
-                    <li>Extension should detect the "Next" button (▶) on the far right</li>
-                    <li>Left arrow key should trigger previous navigation</li>
-                    <li>Right arrow key should trigger next navigation</li>
-                    <li>Keys should not be bound if already in use by the page</li>
-                </ul>
-            </div>
-
-            <div class="test-section">
-                <h3>🔍 Detection Patterns Tested</h3>
-                <div class="nav-demo">
-                    <div>
-                        <h4>Text-Based Navigation</h4>
-                        <div class="inline-nav">
-                            <a href="#" onclick="simulateNavigation('previous')">← Previous</a>
-                            <a href="#" onclick="simulateNavigation('next')">Next →</a>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <h4>Symbol-Based Navigation</h4>
-                        <div class="inline-nav">
-                            <a href="#" onclick="simulateNavigation('previous')">◀ Back</a>
-                            <a href="#" onclick="simulateNavigation('next')">Forward ▶</a>
-                        </div>
-                    </div>
+        <!-- Status Dashboard -->
+        <div class="status-dashboard">
+            <h3>🎯 Extension Status</h3>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-value" id="left-arrow-status">⏳</div>
+                    <div class="status-label">Left Arrow (←)</div>
                 </div>
-
-                <div class="pagination-demo">
-                    <h4>Pagination Example</h4>
-                    <a href="#" onclick="simulateNavigation('previous')" rel="prev">« Previous</a>
-                    <a href="#" class="current">1</a>
-                    <a href="#">2</a>
-                    <a href="#">3</a>
-                    <a href="#" onclick="simulateNavigation('next')" rel="next">Next »</a>
+                <div class="status-item">
+                    <div class="status-value" id="right-arrow-status">⏳</div>
+                    <div class="status-label">Right Arrow (→)</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="extension-status">⏳</div>
+                    <div class="status-label">Extension Status</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="navigation-count">0</div>
+                    <div class="status-label">Navigation Elements</div>
                 </div>
             </div>
+        </div>
 
-            <div class="test-section">
-                <h3>⚙️ Advanced Test Scenarios</h3>
-                <p><strong>Edge Cases:</strong></p>
-                <ul>
-                    <li>Multiple navigation elements (extension should pick the best ones)</li>
-                    <li>Hidden or non-functional navigation elements</li>
-                    <li>Navigation elements with complex HTML structures</li>
-                    <li>Dynamic content changes (SPA simulation)</li>
-                </ul>
-                
-                <button onclick="addDynamicNavigation()" style="padding: 10px 20px; margin: 10px 5px; border: none; background: #28a745; color: white; border-radius: 5px; cursor: pointer;">
-                    Add Dynamic Navigation
+        <!-- Test Controls -->
+        <div class="test-controls">
+            <h3>🧪 Test Controls</h3>
+            <div class="control-grid">
+                <button class="test-button" onclick="addDynamicNavigation()">
+                    ➕ Add Dynamic Navigation
                 </button>
-                
-                <button onclick="removeDynamicNavigation()" style="padding: 10px 20px; margin: 10px 5px; border: none; background: #dc3545; color: white; border-radius: 5px; cursor: pointer;">
-                    Remove Dynamic Navigation
+                <button class="test-button" onclick="removeDynamicNavigation()">
+                    ➖ Remove Dynamic Navigation
                 </button>
-                
-                <button onclick="testKeyConflict()" style="padding: 10px 20px; margin: 10px 5px; border: none; background: #ffc107; color: #333; border-radius: 5px; cursor: pointer;">
-                    Test Key Conflict
+                <button class="test-button" onclick="simulateKeyConflict()">
+                    ⚠️ Simulate Key Conflict
+                </button>
+                <button class="test-button" onclick="clearKeyConflict()">
+                    ✅ Clear Key Conflict
+                </button>
+                <button class="test-button" onclick="refreshExtension()">
+                    🔄 Refresh Extension
+                </button>
+                <button class="test-button" onclick="toggleDebugMode()">
+                    🐛 Toggle Debug Mode
                 </button>
             </div>
+            
+            <div class="dynamic-container" id="dynamicContainer">
+                <!-- Dynamic elements will be added here -->
+            </div>
+        </div>
 
-            <div class="test-section">
-                <h3>📊 Test Results</h3>
-                <div id="testResults">
-                    <p>Perform the tests above and observe the behavior. Check the browser console for detailed logs.</p>
-                </div>
+        <!-- Instructions -->
+        <div class="instructions">
+            <h3>📋 How to Test</h3>
+            <ol>
+                <li>Install the Side Scroller Chrome extension</li>
+                <li>Open this page with the extension enabled</li>
+                <li>Try using the <strong>Left Arrow (←)</strong> and <strong>Right Arrow (→)</strong> keys</li>
+                <li>Check the status dashboard above for real-time binding information</li>
+                <li>Use the test controls to simulate different scenarios</li>
+                <li>Open browser console (F12) for detailed debug information</li>
+                <li>Test on various websites to ensure compatibility</li>
+            </ol>
+            
+            <h3>🎯 Expected Behavior</h3>
+            <ul>
+                <li><strong>Left Arrow</strong> should trigger the "← Previous" button</li>
+                <li><strong>Right Arrow</strong> should trigger the "Next →" button</li>
+                <li>Status indicators should show "🟢" when bound correctly</li>
+                <li>Navigation should work without interfering with other page functionality</li>
+                <li>Extension should handle dynamic content changes automatically</li>
+            </ul>
+        </div>
+
+        <!-- Log Output -->
+        <div class="log-output" id="logOutput">
+            <div class="log-entry">
+                <span class="log-timestamp">[Loading]</span>
+                <span>Test page initialized - waiting for extension...</span>
             </div>
         </div>
     </div>
 
     <script>
+        // Test page functionality
         let keyConflictActive = false;
-        let dynamicNavAdded = false;
+        let navigationCount = 0;
+        
+        // Log function
+        function addLog(message, type = 'info') {
+            const logOutput = document.getElementById('logOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-timestamp">[${timestamp}]</span>
+                <span style="color: ${type === 'error' ? '#ff6b6b' : type === 'success' ? '#51cf66' : '#74c0fc'}">${message}</span>
+            `;
+            logOutput.appendChild(logEntry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
 
-        // Simulate navigation actions
-        function simulateNavigation(direction) {
-            const action = direction === 'next' ? 'Next Page' : 'Previous Page';
-            console.log(`[Test Page] ${action} navigation triggered`);
+        // Navigation simulation
+        function navigateTo(direction) {
+            addLog(`Navigation triggered: ${direction}`, 'success');
+            updateNavigationCount();
             
             // Visual feedback
-            const status = document.getElementById('testResults');
-            const timestamp = new Date().toLocaleTimeString();
-            status.innerHTML += `<p><strong>${timestamp}:</strong> ${action} navigation triggered successfully!</p>`;
+            const button = document.querySelector(`.nav-${direction}`);
+            const originalText = button.textContent;
+            button.textContent = direction === 'previous' ? '⬅️ Clicked!' : 'Clicked! ➡️';
+            button.style.background = 'rgba(76, 175, 80, 0.8)';
             
-            // Scroll to show feedback
-            status.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.background = 'rgba(255, 255, 255, 0.2)';
+            }, 1000);
         }
 
-        // Add dynamic navigation elements
+        // Dynamic navigation elements
         function addDynamicNavigation() {
-            if (dynamicNavAdded) return;
+            const container = document.getElementById('dynamicContainer');
             
-            const dynamicPrev = document.createElement('button');
-            dynamicPrev.innerHTML = '← Dynamic Prev';
-            dynamicPrev.style.cssText = 'position: fixed; left: 100px; top: 50%; transform: translateY(-50%); z-index: 999; padding: 10px; background: #ff6b6b; color: white; border: none; border-radius: 5px; cursor: pointer;';
-            dynamicPrev.onclick = () => simulateNavigation('previous');
-            dynamicPrev.id = 'dynamicPrev';
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = '◀ Dynamic Prev';
+            prevBtn.style.cssText = 'position: fixed; left: 80px; top: 60%; padding: 10px; background: rgba(255,255,255,0.3); color: white; border: none; border-radius: 5px; cursor: pointer;';
+            prevBtn.onclick = () => navigateTo('dynamic-previous');
             
-            const dynamicNext = document.createElement('button');
-            dynamicNext.innerHTML = 'Dynamic Next →';
-            dynamicNext.style.cssText = 'position: fixed; right: 100px; top: 50%; transform: translateY(-50%); z-index: 999; padding: 10px; background: #4ecdc4; color: white; border: none; border-radius: 5px; cursor: pointer;';
-            dynamicNext.onclick = () => simulateNavigation('next');
-            dynamicNext.id = 'dynamicNext';
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = 'Dynamic Next ▶';
+            nextBtn.style.cssText = 'position: fixed; right: 80px; top: 60%; padding: 10px; background: rgba(255,255,255,0.3); color: white; border: none; border-radius: 5px; cursor: pointer;';
+            nextBtn.onclick = () => navigateTo('dynamic-next');
             
-            document.body.appendChild(dynamicPrev);
-            document.body.appendChild(dynamicNext);
+            container.appendChild(prevBtn);
+            container.appendChild(nextBtn);
             
-            dynamicNavAdded = true;
-            console.log('[Test Page] Dynamic navigation elements added');
-            
-            // Trigger extension reinitializaton (if available)
-            if (window.smartNavigationBinder) {
-                setTimeout(() => window.smartNavigationBinder.reinitialize(), 500);
-            }
+            addLog('Dynamic navigation elements added', 'success');
         }
 
-        // Remove dynamic navigation elements
         function removeDynamicNavigation() {
-            const dynamicPrev = document.getElementById('dynamicPrev');
-            const dynamicNext = document.getElementById('dynamicNext');
+            const container = document.getElementById('dynamicContainer');
+            container.innerHTML = '';
+            addLog('Dynamic navigation elements removed', 'info');
+        }
+
+        // Key conflict simulation
+        function simulateKeyConflict() {
+            if (keyConflictActive) return;
             
-            if (dynamicPrev) dynamicPrev.remove();
-            if (dynamicNext) dynamicNext.remove();
-            
-            dynamicNavAdded = false;
-            console.log('[Test Page] Dynamic navigation elements removed');
-            
-            // Trigger extension reinitializaton (if available)
-            if (window.smartNavigationBinder) {
-                setTimeout(() => window.smartNavigationBinder.reinitialize(), 500);
+            keyConflictActive = true;
+            document.addEventListener('keydown', keyConflictHandler);
+            addLog('Key conflict simulation activated', 'error');
+            updateStatus('extension-status', '⚠️');
+        }
+
+        function clearKeyConflict() {
+            keyConflictActive = false;
+            document.removeEventListener('keydown', keyConflictHandler);
+            addLog('Key conflict simulation cleared', 'success');
+            updateStatus('extension-status', '🟢');
+        }
+
+        function keyConflictHandler(e) {
+            if (e.keyCode === 37 || e.keyCode === 39) {
+                e.preventDefault();
+                e.stopPropagation();
+                addLog(`Key conflict: ${e.keyCode === 37 ? 'Left' : 'Right'} arrow blocked`, 'error');
             }
         }
 
-        // Test key conflict scenario
-        function testKeyConflict() {
-            if (keyConflictActive) {
-                // Remove conflict
-                document.removeEventListener('keydown', conflictKeyHandler);
-                keyConflictActive = false;
-                console.log('[Test Page] Key conflict handler removed');
-                alert('Key conflict removed. Extension should now be able to bind arrow keys.');
+        // Extension control functions
+        function refreshExtension() {
+            addLog('Requesting extension refresh...', 'info');
+            // Try to communicate with extension
+            if (window.smartNavigationBinder) {
+                window.smartNavigationBinder.reinitialize();
+                addLog('Extension reinitialize called', 'success');
             } else {
-                // Add conflict
-                document.addEventListener('keydown', conflictKeyHandler);
-                keyConflictActive = true;
-                console.log('[Test Page] Key conflict handler added');
-                alert('Key conflict activated. Arrow keys are now captured by the page.');
-            }
-            
-            // Trigger extension reinitializaton (if available)
-            if (window.smartNavigationBinder) {
-                setTimeout(() => window.smartNavigationBinder.reinitialize(), 500);
+                addLog('Extension not found - is it installed and enabled?', 'error');
             }
         }
 
-        // Conflicting key handler
-        function conflictKeyHandler(event) {
-            if (event.keyCode === 37 || event.keyCode === 39) {
-                event.preventDefault();
-                console.log('[Test Page] Arrow key captured by page conflict handler');
+        function toggleDebugMode() {
+            if (window.smartNavigationBinder) {
+                window.smartNavigationBinder.enableDebugMode();
+                addLog('Debug mode toggled', 'success');
+            } else {
+                addLog('Extension not available for debug mode', 'error');
             }
         }
 
-        // Monitor extension status
-        function updateExtensionStatus() {
-            const extensionStatus = document.getElementById('extensionStatus');
-            const leftArrowStatus = document.getElementById('leftArrowStatus');
-            const rightArrowStatus = document.getElementById('rightArrowStatus');
-            
-            // Check if extension is loaded
+        // Status update functions
+        function updateStatus(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = value;
+            }
+        }
+
+        function updateNavigationCount() {
+            navigationCount++;
+            updateStatus('navigation-count', navigationCount);
+        }
+
+        // Extension status monitoring
+        function checkExtensionStatus() {
             if (window.smartNavigationBinder) {
-                extensionStatus.textContent = 'Active';
-                extensionStatus.style.color = '#28a745';
+                updateStatus('extension-status', '🟢');
+                addLog('Extension detected and active', 'success');
                 
-                const detector = window.smartNavigationBinder.detector;
-                const keyManager = window.smartNavigationBinder.keyManager;
-                
-                if (detector && keyManager) {
-                    // Check arrow key bindings
-                    leftArrowStatus.textContent = keyManager.boundKeys.has(37) ? 'Bound' : 'Not Bound';
-                    leftArrowStatus.style.color = keyManager.boundKeys.has(37) ? '#28a745' : '#ffc107';
+                // Try to get binding status
+                try {
+                    const leftBound = window.smartNavigationBinder.keyManager.boundKeys[37] ? '🟢' : '🔴';
+                    const rightBound = window.smartNavigationBinder.keyManager.boundKeys[39] ? '🟢' : '🔴';
                     
-                    rightArrowStatus.textContent = keyManager.boundKeys.has(39) ? 'Bound' : 'Not Bound';
-                    rightArrowStatus.style.color = keyManager.boundKeys.has(39) ? '#28a745' : '#ffc107';
+                    updateStatus('left-arrow-status', leftBound);
+                    updateStatus('right-arrow-status', rightBound);
+                    
+                    addLog(`Arrow key status - Left: ${leftBound === '🟢' ? 'Bound' : 'Unbound'}, Right: ${rightBound === '🟢' ? 'Bound' : 'Unbound'}`, 'info');
+                } catch (error) {
+                    addLog('Could not check key binding status', 'error');
                 }
             } else {
-                extensionStatus.textContent = 'Not Detected';
-                extensionStatus.style.color = '#dc3545';
-                leftArrowStatus.textContent = 'N/A';
-                rightArrowStatus.textContent = 'N/A';
+                updateStatus('extension-status', '🔴');
+                updateStatus('left-arrow-status', '❌');
+                updateStatus('right-arrow-status', '❌');
             }
         }
 
-        // Update status periodically
-        setInterval(updateExtensionStatus, 2000);
+        // Initialize test page
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('Test page loaded successfully', 'success');
+            
+            // Check for extension periodically
+            setInterval(checkExtensionStatus, 2000);
+            
+            // Initial status check
+            setTimeout(checkExtensionStatus, 1000);
+            
+            addLog('Status monitoring started', 'info');
+        });
 
-        // Initial status update
-        setTimeout(updateExtensionStatus, 1000);
-
-        console.log('[Test Page] Navigation Key Binder Test Page loaded');
-        console.log('[Test Page] This page includes navigation elements positioned for extension testing');
+        // Listen for extension events
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'EXTENSION_STATUS') {
+                addLog(`Extension message: ${event.data.message}`, 'info');
+            }
+        });
     </script>
 </body>
 </html> 

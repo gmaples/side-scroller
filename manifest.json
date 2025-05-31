@@ -1,10 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Smart Navigation Key Binder",
+  "name": "Side Scroller",
   "version": "1.0.0",
-  "description": "Automatically binds arrow keys to page navigation elements for enhanced browsing experience",
+  "description": "Navigate web pages using arrow keys with intelligent detection of next/previous page elements",
   
   "permissions": [
+    "storage",
     "activeTab"
   ],
   
@@ -12,13 +13,13 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_end"
     }
   ],
   
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Smart Navigation Key Binder"
+    "default_title": "Side Scroller"
   },
   
   "icons": {

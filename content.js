@@ -1,6 +1,6 @@
 /**
- * Smart Navigation Key Binder Content Script
- * Detects navigation elements and binds arrow keys for enhanced browsing
+ * Side Scroller Content Script
+ * Automatically detects navigation elements and binds arrow keys for enhanced web browsing
  */
 
 class NavigationElementDetector {
@@ -447,7 +447,7 @@ class SmartNavigationKeyBinder {
     async initialize() {
         if (this.isInitialized) return;
         
-        console.log('[Smart Navigation] Initializing Smart Navigation Key Binder...');
+        console.log('[Side Scroller] Initializing Side Scroller...');
         
         try {
             // Wait for page to be fully loaded
@@ -460,10 +460,10 @@ class SmartNavigationKeyBinder {
             this.bindNavigationKeys(navigationElements);
             
             this.isInitialized = true;
-            console.log('[Smart Navigation] Initialization complete');
+            console.log('[Side Scroller] Initialization complete');
             
         } catch (error) {
-            console.error('[Smart Navigation] Initialization error:', error);
+            console.error('[Side Scroller] Initialization error:', error);
             this.handleInitializationError();
         }
     }
@@ -493,20 +493,20 @@ class SmartNavigationKeyBinder {
         if (previousPage) {
             const success = this.keyManager.bindKeyToElement(37, previousPage, 'previous');
             if (success) {
-                console.log('[Smart Navigation] Left arrow key bound to previous page navigation');
+                console.log('[Side Scroller] Left arrow key bound to previous page navigation');
             }
         } else {
-            console.log('[Smart Navigation] No previous page navigation element detected');
+            console.log('[Side Scroller] No previous page navigation element detected');
         }
         
         // Bind right arrow to next page (if found)
         if (nextPage) {
             const success = this.keyManager.bindKeyToElement(39, nextPage, 'next');
             if (success) {
-                console.log('[Smart Navigation] Right arrow key bound to next page navigation');
+                console.log('[Side Scroller] Right arrow key bound to next page navigation');
             }
         } else {
-            console.log('[Smart Navigation] No next page navigation element detected');
+            console.log('[Side Scroller] No next page navigation element detected');
         }
     }
 
@@ -516,10 +516,10 @@ class SmartNavigationKeyBinder {
     handleInitializationError() {
         if (this.retryCount < this.maxRetries) {
             this.retryCount++;
-            console.log(`[Smart Navigation] Retrying initialization (${this.retryCount}/${this.maxRetries})...`);
+            console.log(`[Side Scroller] Retrying initialization (${this.retryCount}/${this.maxRetries})...`);
             setTimeout(() => this.initialize(), 2000);
         } else {
-            console.error('[Smart Navigation] Failed to initialize after maximum retries');
+            console.error('[Side Scroller] Failed to initialize after maximum retries');
         }
     }
 
@@ -527,7 +527,7 @@ class SmartNavigationKeyBinder {
      * Reinitializes the binder (useful for SPA navigation)
      */
     async reinitialize() {
-        console.log('[Smart Navigation] Reinitializing...');
+        console.log('[Side Scroller] Reinitializing...');
         this.cleanup();
         this.isInitialized = false;
         this.retryCount = 0;
@@ -540,7 +540,7 @@ class SmartNavigationKeyBinder {
     cleanup() {
         this.keyManager.unbindAllKeys();
         this.detector.detectedNavigationElements = { nextPage: null, previousPage: null };
-        console.log('[Smart Navigation] Cleanup complete');
+        console.log('[Side Scroller] Cleanup complete');
     }
 
     /**
@@ -550,7 +550,7 @@ class SmartNavigationKeyBinder {
         this.debugMode = true;
         this.detector.debugMode = true;
         this.keyManager.debugMode = true;
-        console.log('[Smart Navigation] Debug mode enabled');
+        console.log('[Side Scroller] Debug mode enabled');
     }
 }
 
@@ -578,7 +578,7 @@ let lastUrl = location.href;
 function detectUrlChange() {
     if (location.href !== lastUrl) {
         lastUrl = location.href;
-        console.log('[Smart Navigation] URL change detected, reinitializing...');
+        console.log('[Side Scroller] URL change detected, reinitializing...');
         if (smartNavigationBinder) {
             setTimeout(() => smartNavigationBinder.reinitialize(), 1000);
         }
@@ -690,4 +690,4 @@ function toggleDebugMode(enabled) {
     }
 }
 
-console.log('[Smart Navigation] Content script loaded successfully'); 
+console.log('[Side Scroller] Content script loaded successfully'); 

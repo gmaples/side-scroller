@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Navigation Key Binder</title>
+    <title>Side Scroller</title>
     <style>
         body {
-            width: 350px;
+            width: 300px;
+            min-height: 250px;
+            margin: 0;
             padding: 20px;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            box-sizing: border-box;
         }
 
         .header {
@@ -20,34 +22,29 @@
         }
 
         .header h1 {
-            margin: 0 0 5px 0;
+            margin: 0;
             font-size: 18px;
             font-weight: 600;
         }
 
-        .header p {
-            margin: 0;
-            font-size: 12px;
-            opacity: 0.8;
-        }
-
-        .status-section {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            backdrop-filter: blur(10px);
+        .status-container {
+            margin-bottom: 20px;
         }
 
         .status-item {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            justify-content: space-between;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            transition: background 0.3s ease;
         }
 
-        .status-item:last-child {
-            margin-bottom: 0;
+        .status-item:hover {
+            background: rgba(255, 255, 255, 0.15);
         }
 
         .status-label {
@@ -56,138 +53,128 @@
         }
 
         .status-indicator {
-            padding: 4px 8px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
+            font-size: 16px;
+            font-weight: bold;
         }
 
         .status-bound {
-            background: rgba(76, 175, 80, 0.8);
-            color: white;
+            color: #4ade80;
         }
 
-        .status-not-bound {
-            background: rgba(255, 193, 7, 0.8);
-            color: #333;
+        .status-unbound {
+            color: #f87171;
         }
 
-        .status-not-detected {
-            background: rgba(244, 67, 54, 0.8);
-            color: white;
+        .status-available {
+            color: #fbbf24;
         }
 
-        .controls-section {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-            padding: 15px;
-            backdrop-filter: blur(10px);
+        .controls {
+            margin-top: 15px;
         }
 
-        .control-button {
+        .btn {
             width: 100%;
             padding: 10px;
+            margin-bottom: 8px;
             border: none;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.15);
             color: white;
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin-bottom: 8px;
+            backdrop-filter: blur(10px);
         }
 
-        .control-button:last-child {
-            margin-bottom: 0;
-        }
-
-        .control-button:hover {
-            background: rgba(255, 255, 255, 0.3);
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.25);
             transform: translateY(-1px);
         }
 
-        .control-button:active {
+        .btn:active {
             transform: translateY(0);
         }
 
-        .info-section {
-            margin-top: 15px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+        .info-text {
             font-size: 12px;
+            text-align: center;
+            margin-top: 15px;
+            opacity: 0.8;
             line-height: 1.4;
         }
 
         .loading {
             text-align: center;
             padding: 20px;
+            font-size: 14px;
+            opacity: 0.8;
         }
 
-        .loading-spinner {
-            width: 20px;
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 40px;
             height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.3);
+            transition: 0.4s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: 0.4s;
             border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-            margin: 0 auto 10px;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        input:checked + .slider {
+            background-color: #4ade80;
         }
 
-        .arrow-indicator {
-            font-size: 16px;
-            margin-right: 5px;
+        input:checked + .slider:before {
+            transform: translateX(20px);
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🏹 Smart Navigation</h1>
-        <p>Arrow Key Binder for Web Navigation</p>
+        <h1>🎮 Side Scroller</h1>
     </div>
 
-    <div id="loading" class="loading">
-        <div class="loading-spinner"></div>
-        <p>Checking current page...</p>
-    </div>
-
-    <div id="main-content" style="display: none;">
-        <div class="status-section">
-            <div class="status-item">
-                <span class="status-label">
-                    <span class="arrow-indicator">←</span>Left Arrow (Previous)
-                </span>
-                <span id="left-arrow-status" class="status-indicator">Loading...</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">
-                    <span class="arrow-indicator">→</span>Right Arrow (Next)
-                </span>
-                <span id="right-arrow-status" class="status-indicator">Loading...</span>
-            </div>
-        </div>
-
-        <div class="controls-section">
-            <button id="refresh-btn" class="control-button">
-                🔄 Refresh Detection
-            </button>
-            <button id="debug-btn" class="control-button">
-                🐛 Toggle Debug Mode
-            </button>
-        </div>
-
-        <div class="info-section">
-            <strong>How it works:</strong>
-            <br>• Detects navigation elements on far left/right of page
-            <br>• Binds arrow keys only if not already in use
-            <br>• Works on most websites with pagination
-            <br>• Automatically detects SPA navigation changes
+    <div id="content">
+        <div class="loading">
+            Loading extension status...
         </div>
     </div>
 

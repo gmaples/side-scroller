@@ -1,6 +1,6 @@
 /**
- * Popup Script for Smart Navigation Key Binder
- * Handles UI interactions and communication with content script
+ * Popup Script for Side Scroller
+ * Handles the extension popup interface and user interactions
  */
 
 class PopupController {
