@@ -21,12 +21,139 @@ class NavigationElementDetector {
             'prev-arrow', 'back-arrow', 'lightbox-prev'
         ];
         
+        // Enhanced keyword patterns with word boundaries and context
+        this.intelligentNavigationPatterns = {
+            next: [
+                // Exact word matches with word boundaries
+                { pattern: /\bnext\b/i, score: 15, context: 'navigation' },
+                { pattern: /\bforward\b/i, score: 12, context: 'navigation' },
+                { pattern: /\bcontinue\b/i, score: 10, context: 'navigation' },
+                { pattern: /\bnewer\b/i, score: 12, context: 'temporal' },
+                { pattern: /\bright\b/i, score: 8, context: 'directional' },
+                
+                // Navigation-specific phrases
+                { pattern: /next\s+page/i, score: 20, context: 'navigation' },
+                { pattern: /next\s+chapter/i, score: 18, context: 'navigation' },
+                { pattern: /next\s+post/i, score: 16, context: 'navigation' },
+                { pattern: /more\s+posts/i, score: 14, context: 'navigation' },
+                { pattern: /load\s+more/i, score: 14, context: 'navigation' },
+                { pattern: /show\s+more/i, score: 12, context: 'navigation' },
+                { pattern: /view\s+more/i, score: 12, context: 'navigation' },
+                
+                // Arrow symbols and icons (exact match)
+                { pattern: /^→$/, score: 18, context: 'symbol' },
+                { pattern: /^▶$/, score: 18, context: 'symbol' },
+                { pattern: /^►$/, score: 18, context: 'symbol' },
+                { pattern: /^>$/, score: 15, context: 'symbol' },
+                
+                // Icon class patterns
+                { pattern: /right-fill/i, score: 16, context: 'icon' },
+                { pattern: /arrow-right/i, score: 16, context: 'icon' },
+                { pattern: /chevron-right/i, score: 16, context: 'icon' }
+            ],
+            
+            previous: [
+                // Exact word matches with word boundaries
+                { pattern: /\bprev\b/i, score: 15, context: 'navigation' },
+                { pattern: /\bprevious\b/i, score: 15, context: 'navigation' },
+                { pattern: /\bback\b/i, score: 12, context: 'navigation' },
+                { pattern: /\bolder\b/i, score: 12, context: 'temporal' },
+                { pattern: /\bleft\b/i, score: 8, context: 'directional' },
+                
+                // Navigation-specific phrases
+                { pattern: /previous\s+page/i, score: 20, context: 'navigation' },
+                { pattern: /previous\s+chapter/i, score: 18, context: 'navigation' },
+                { pattern: /previous\s+post/i, score: 16, context: 'navigation' },
+                { pattern: /go\s+back/i, score: 14, context: 'navigation' },
+                
+                // Arrow symbols and icons (exact match)
+                { pattern: /^←$/, score: 18, context: 'symbol' },
+                { pattern: /^◀$/, score: 18, context: 'symbol' },
+                { pattern: /^◄$/, score: 18, context: 'symbol' },
+                { pattern: /^<$/, score: 15, context: 'symbol' },
+                
+                // Icon class patterns
+                { pattern: /left-fill/i, score: 16, context: 'icon' },
+                { pattern: /arrow-left/i, score: 16, context: 'icon' },
+                { pattern: /chevron-left/i, score: 16, context: 'icon' }
+            ]
+        };
+        
+        // False positive patterns - content that should NOT be considered navigation
+        this.falsePositivePatterns = [
+            // Social media and community terms
+            /\bcommunity\b/i,
+            /\bcomments\b/i,
+            /\bdiscussion\b/i,
+            /\bupvote\b/i,
+            /\bdownvote\b/i,
+            /\bshare\b/i,
+            /\bsave\b/i,
+            /\breport\b/i,
+            /\bfollow\b/i,
+            /\bunfollow\b/i,
+            /\bsubscribe\b/i,
+            /\bunsubscribe\b/i,
+            
+            // Content-related terms that aren't navigation
+            /\bmore\s+info/i,
+            /\bmore\s+details/i,
+            /\bmore\s+about/i,
+            /\bmore\s+options/i,
+            /\bmore\s+settings/i,
+            /\blearn\s+more/i,
+            /\bread\s+more/i,
+            /\bfind\s+out\s+more/i,
+            
+            // UI elements that aren't page navigation
+            /\bmenu\b/i,
+            /\bdropdown\b/i,
+            /\bfilter\b/i,
+            /\bsort\b/i,
+            /\bsearch\b/i,
+            /\bprofile\b/i,
+            /\bsettings\b/i,
+            /\bnotifications\b/i,
+            
+            // Reddit-specific false positives
+            /\br\/\w+/i,        // Subreddit links like r/community
+            /\bu\/\w+/i,        // User links like u/username
+            /\bjoin\s+community/i,
+            /\bcreate\s+post/i,
+            /\bcross-?post/i,
+            /\bx-post/i,
+            
+            // Generic content terms
+            /\bcategory\b/i,
+            /\btag\b/i,
+            /\blabel\b/i,
+            /\bbadge\b/i,
+            /\bstatus\b/i,
+            
+            // Long text content (likely not navigation)
+            /.{100,}/  // More than 100 characters is probably not a navigation button
+        ];
+        
+        // Content that should be heavily penalized (not filtered completely but scored low)
+        this.contentPenaltyPatterns = [
+            { pattern: /\bmore\b/i, penalty: -15 }, // Generic "more" without context
+            { pattern: /\bless\b/i, penalty: -10 },
+            { pattern: /\bother\b/i, penalty: -8 },
+            { pattern: /\brelated\b/i, penalty: -8 },
+            { pattern: /\bsimilar\b/i, penalty: -8 },
+            { pattern: /\badditional\b/i, penalty: -10 },
+            { pattern: /\bextra\b/i, penalty: -8 }
+        ];
+        
         this.detectedNavigationElements = {
             nextPage: null,
             previousPage: null
         };
         
         this.debugMode = false;
+        
+        // Initialize browser UI filter to exclude browser controls
+        this.browserUIFilter = new BrowserUIElementFilter();
     }
 
     /**
@@ -72,7 +199,7 @@ class NavigationElementDetector {
     }
 
     /**
-     * Retrieves all potentially clickable elements from the DOM
+     * Retrieves all potentially clickable elements from the DOM, excluding browser UI elements
      */
     getAllClickableElements() {
         const selectors = [
@@ -111,9 +238,28 @@ class NavigationElementDetector {
             }
         });
         
-        // Remove duplicates and hidden elements
+        // Remove duplicates first
         const uniqueElements = [...new Set(elements)];
-        return uniqueElements.filter(el => this.isElementVisible(el));
+        
+        // Filter out hidden elements and browser UI elements
+        const filteredElements = uniqueElements.filter(el => {
+            // First check basic visibility
+            if (!this.isElementVisible(el)) {
+                return false;
+            }
+            
+            // Then check if it's a browser UI element that should be excluded
+            if (this.browserUIFilter.shouldExcludeElement(el)) {
+                this.debugLog(`🚫 Excluded browser UI element: ${this.browserUIFilter.getElementDescription(el)}`);
+                return false;
+            }
+            
+            return true;
+        });
+        
+        this.debugLog(`Element filtering results: ${elements.length} total → ${uniqueElements.length} unique → ${filteredElements.length} after browser UI filtering`);
+        
+        return filteredElements;
     }
 
     /**
@@ -279,66 +425,226 @@ class NavigationElementDetector {
     }
 
     /**
-     * Determines navigation direction based on element attributes and content
+     * Enhanced navigation direction detection with intelligent content analysis
      */
     determineNavigationDirection(element, text) {
-        // Check for explicit navigation attributes
+        // Check for explicit navigation attributes (highest priority)
         const rel = element.getAttribute('rel');
         if (rel === 'next') return 'next';
         if (rel === 'prev' || rel === 'previous') return 'previous';
         
-        // Check for CSS classes
+        // Check for CSS classes that indicate navigation
         const className = element.className.toLowerCase();
-        if (className.includes('next') || className.includes('forward')) return 'next';
-        if (className.includes('prev') || className.includes('back')) return 'previous';
+        if (className.includes('pagination') || className.includes('pager')) {
+            if (className.includes('next') || className.includes('forward')) return 'next';
+            if (className.includes('prev') || className.includes('back')) return 'previous';
+        }
         
-        // Check text content
-        if (this.containsKeywords(text, this.nextPageKeywords)) return 'next';
-        if (this.containsKeywords(text, this.previousPageKeywords)) return 'previous';
+        // More specific class checks
+        if (className.includes('next-page') || className.includes('next-btn')) return 'next';
+        if (className.includes('prev-page') || className.includes('prev-btn')) return 'previous';
         
+        // Enhanced content analysis with false positive detection
+        return this.analyzeNavigationContent(element, text);
+    }
+
+    /**
+     * Intelligent content analysis for navigation detection
+     */
+    analyzeNavigationContent(element, text) {
+        // First check for false positives - immediately exclude if found
+        if (this.containsFalsePositivePatterns(text)) {
+            this.debugLog(`❌ False positive detected in text: "${text}"`);
+            return null;
+        }
+        
+        // Check element attributes for additional context
+        const ariaLabel = element.getAttribute('aria-label') || '';
+        const title = element.getAttribute('title') || '';
+        const fullText = `${text} ${ariaLabel} ${title}`.toLowerCase().trim();
+        
+        // Check combined text for false positives
+        if (this.containsFalsePositivePatterns(fullText)) {
+            this.debugLog(`❌ False positive detected in full text: "${fullText}"`);
+            return null;
+        }
+        
+        // Analyze navigation patterns with scoring
+        const nextScore = this.calculatePatternScore(fullText, this.intelligentNavigationPatterns.next);
+        const prevScore = this.calculatePatternScore(fullText, this.intelligentNavigationPatterns.previous);
+        
+        // Apply content penalties
+        const nextPenalty = this.calculateContentPenalty(fullText);
+        const prevPenalty = this.calculateContentPenalty(fullText);
+        
+        const finalNextScore = nextScore + nextPenalty;
+        const finalPrevScore = prevScore + prevPenalty;
+        
+        this.debugLog(`Navigation analysis for "${text}": next=${finalNextScore}, prev=${finalPrevScore}`);
+        
+        // Require minimum score to be considered navigation
+        const minimumScore = 8;
+        
+        if (finalNextScore >= minimumScore && finalNextScore > finalPrevScore) {
+            return 'next';
+        } else if (finalPrevScore >= minimumScore && finalPrevScore > finalNextScore) {
+            return 'previous';
+        }
+        
+        // If scores are too low or too close, it's probably not navigation
         return null;
     }
 
     /**
-     * Checks if text contains any of the specified keywords
+     * Check if text contains false positive patterns
      */
-    containsKeywords(text, keywords) {
-        return keywords.some(keyword => text.includes(keyword));
+    containsFalsePositivePatterns(text) {
+        return this.falsePositivePatterns.some(pattern => pattern.test(text));
     }
 
     /**
-     * Calculates a relevance score for a navigation element
+     * Calculate pattern-based score for navigation content
+     */
+    calculatePatternScore(text, patterns) {
+        let totalScore = 0;
+        let matchCount = 0;
+        
+        patterns.forEach(({ pattern, score, context }) => {
+            if (pattern.test(text)) {
+                totalScore += score;
+                matchCount++;
+                this.debugLog(`✅ Pattern match: "${pattern}" (score: +${score}, context: ${context})`);
+            }
+        });
+        
+        // Bonus for multiple pattern matches (indicates strong navigation intent)
+        if (matchCount > 1) {
+            totalScore += matchCount * 2;
+        }
+        
+        return totalScore;
+    }
+
+    /**
+     * Calculate content penalty score
+     */
+    calculateContentPenalty(text) {
+        let totalPenalty = 0;
+        
+        this.contentPenaltyPatterns.forEach(({ pattern, penalty }) => {
+            if (pattern.test(text)) {
+                totalPenalty += penalty;
+                this.debugLog(`⚠️ Content penalty: "${pattern}" (score: ${penalty})`);
+            }
+        });
+        
+        return totalPenalty;
+    }
+
+    /**
+     * Legacy method for backward compatibility - now defers to intelligent analysis
+     */
+    containsKeywords(text, keywords) {
+        // This method is kept for backward compatibility but now defers to intelligent analysis
+        // Convert legacy keywords to simple pattern matching for scoring purposes
+        return keywords.some(keyword => {
+            if (keyword.length === 1) {
+                // Single character/symbol - exact match
+                return text === keyword;
+            } else {
+                // Word - use word boundary
+                const pattern = new RegExp(`\\b${keyword}\\b`, 'i');
+                return pattern.test(text);
+            }
+        });
+    }
+
+    /**
+     * Enhanced element scoring using intelligent content analysis
      */
     calculateElementScore(element, text, direction) {
         let score = 0;
         
-        // Base score for text match
-        const keywords = direction === 'next' ? this.nextPageKeywords : this.previousPageKeywords;
-        keywords.forEach(keyword => {
-            if (text.includes(keyword)) {
-                score += keyword.length === 1 ? 5 : 10; // Symbols get lower score than words
-            }
-        });
+        // Get element attributes for comprehensive analysis
+        const ariaLabel = element.getAttribute('aria-label') || '';
+        const title = element.getAttribute('title') || '';
+        const fullText = `${text} ${ariaLabel} ${title}`.toLowerCase().trim();
         
-        // Bonus for navigation-specific attributes
-        if (element.getAttribute('rel') === direction || element.getAttribute('rel') === 'prev') score += 20;
+        // First, check for false positives - heavily penalize
+        if (this.containsFalsePositivePatterns(fullText)) {
+            this.debugLog(`🚫 False positive penalty applied to: "${text}"`);
+            return -50; // Heavy penalty to exclude false positives
+        }
+        
+        // Apply intelligent pattern scoring
+        const patterns = direction === 'next' ? this.intelligentNavigationPatterns.next : this.intelligentNavigationPatterns.previous;
+        const patternScore = this.calculatePatternScore(fullText, patterns);
+        score += patternScore;
+        
+        // Apply content penalties
+        const contentPenalty = this.calculateContentPenalty(fullText);
+        score += contentPenalty;
+        
+        // Bonus for explicit navigation attributes (highest reliability)
+        const rel = element.getAttribute('rel');
+        if (rel === direction || (rel === 'prev' && direction === 'previous')) {
+            score += 25;
+            this.debugLog(`✅ Navigation attribute bonus: rel="${rel}" (+25)`);
+        }
         
         // Bonus for navigation-specific classes
         const className = element.className.toLowerCase();
-        if (className.includes(direction) || className.includes('nav') || className.includes('pager')) score += 15;
+        if (className.includes('pagination') || className.includes('pager')) {
+            score += 20;
+            this.debugLog(`✅ Pagination class bonus (+20)`);
+        }
+        if (className.includes(direction) || className.includes('nav')) {
+            score += 15;
+            this.debugLog(`✅ Navigation class bonus (+15)`);
+        }
         
-        // Penalty for too much text (likely not a simple navigation button)
-        if (text.length > 50) score -= 10;
-        
-        // Bonus for being closer to exact middle vertically
+        // Position relevance scoring
         const viewportHeight = window.innerHeight;
         const middleY = viewportHeight / 2;
         const rect = element.getBoundingClientRect();
         const elementCenterY = rect.top + rect.height / 2;
         const distanceFromMiddle = Math.abs(elementCenterY - middleY);
         const maxDistance = viewportHeight * 0.3;
-        const proximityScore = Math.max(0, 10 * (1 - distanceFromMiddle / maxDistance));
+        const proximityScore = Math.max(0, 12 * (1 - distanceFromMiddle / maxDistance));
         score += proximityScore;
+        
+        // Size and visibility considerations
+        const elementArea = rect.width * rect.height;
+        if (elementArea < 16) {
+            score -= 5; // Too small, might be decorative
+            this.debugLog(`⚠️ Small element penalty (-5)`);
+        } else if (elementArea > 10000) {
+            score -= 8; // Too large, probably not a simple navigation button
+            this.debugLog(`⚠️ Large element penalty (-8)`);
+        }
+        
+        // Text length considerations for refined scoring
+        if (text.length === 0) {
+            score -= 5; // No text content
+            this.debugLog(`⚠️ No text content penalty (-5)`);
+        } else if (text.length === 1) {
+            // Single character - likely a symbol, good for navigation
+            score += 5;
+            this.debugLog(`✅ Single character bonus (+5)`);
+        } else if (text.length > 75) {
+            score -= 15; // Too verbose for navigation
+            this.debugLog(`⚠️ Verbose text penalty (-15)`);
+        }
+        
+        // Element type bonuses
+        const tagName = element.tagName.toLowerCase();
+        if (tagName === 'a') {
+            score += 5; // Links are natural navigation elements
+        } else if (tagName === 'button') {
+            score += 3; // Buttons are also good navigation elements
+        }
+        
+        this.debugLog(`📊 Element score for "${text}": ${score} (patterns: ${patternScore}, penalty: ${contentPenalty}, proximity: ${proximityScore.toFixed(1)})`);
         
         return score;
     }
@@ -358,28 +664,165 @@ class NavigationElementDetector {
     }
 
     /**
-     * Logs detection results for debugging
+     * Logs detected navigation elements and their details
      */
     logDetectionResults() {
         console.log('[Navigation Detector] Detection Results:');
-        console.log('Previous Page Element:', this.detectedNavigationElements.previousPage);
-        console.log('Next Page Element:', this.detectedNavigationElements.nextPage);
+        console.log('Previous page element:', this.detectedNavigationElements.previousPage);
+        console.log('Next page element:', this.detectedNavigationElements.nextPage);
         
         if (this.detectedNavigationElements.previousPage) {
-            console.log('Previous element text:', this.getElementText(this.detectedNavigationElements.previousPage));
+            console.log('Previous element details:', {
+                tag: this.detectedNavigationElements.previousPage.tagName,
+                text: this.getElementText(this.detectedNavigationElements.previousPage),
+                className: this.detectedNavigationElements.previousPage.className
+            });
         }
+        
         if (this.detectedNavigationElements.nextPage) {
-            console.log('Next element text:', this.getElementText(this.detectedNavigationElements.nextPage));
+            console.log('Next element details:', {
+                tag: this.detectedNavigationElements.nextPage.tagName,
+                text: this.getElementText(this.detectedNavigationElements.nextPage),
+                className: this.detectedNavigationElements.nextPage.className
+            });
         }
     }
 
     /**
-     * Debug logging utility
+     * Enables debug mode for detailed logging including browser UI filtering
+     */
+    enableDebugMode() {
+        this.debugMode = true;
+        this.browserUIFilter.enableDebugMode();
+        this.debugLog('Debug mode enabled for NavigationElementDetector and BrowserUIElementFilter');
+    }
+
+    /**
+     * Disables debug mode
+     */
+    disableDebugMode() {
+        this.debugMode = false;
+        this.browserUIFilter.disableDebugMode();
+        this.debugLog('Debug mode disabled');
+    }
+
+    /**
+     * Debug logging with browser UI filter information
      */
     debugLog(message) {
         if (this.debugMode) {
-            console.log(`[Navigation Detector Debug] ${message}`);
+            console.log(`[Navigation Detector] ${message}`);
         }
+    }
+
+    /**
+     * Analyzes an element for debugging purposes, including browser UI filter analysis
+     */
+    analyzeElementForDebugging(element) {
+        const navigationDirection = this.determineNavigationDirection(element, this.getElementText(element));
+        const browserUIAnalysis = this.browserUIFilter.analyzeElementForDebugging(element);
+        
+        return {
+            element: element,
+            elementText: this.getElementText(element),
+            navigationDirection: navigationDirection,
+            isVisible: this.isElementVisible(element),
+            browserUIAnalysis: browserUIAnalysis,
+            elementScore: navigationDirection ? this.calculateElementScore(element, this.getElementText(element), navigationDirection) : 0
+        };
+    }
+
+    /**
+     * Test the intelligent navigation detection with specific text samples
+     * This method helps debug false positives like "community" on Reddit
+     */
+    testNavigationDetection(testCases = []) {
+        console.log('\n🧪 [Navigation Detector] Testing intelligent navigation detection...\n');
+        
+        // Default test cases including known Reddit false positives
+        const defaultTestCases = [
+            // False positives that should be rejected
+            { text: 'community', expected: null, context: 'Reddit subreddit link' },
+            { text: 'r/community', expected: null, context: 'Reddit subreddit link' },
+            { text: 'Join community', expected: null, context: 'Reddit join button' },
+            { text: 'more info', expected: null, context: 'Generic info link' },
+            { text: 'learn more', expected: null, context: 'Generic learn link' },
+            { text: 'read more', expected: null, context: 'Generic read link' },
+            { text: 'comments', expected: null, context: 'Reddit comments link' },
+            { text: 'share', expected: null, context: 'Social sharing' },
+            { text: 'save', expected: null, context: 'Save button' },
+            { text: 'upvote', expected: null, context: 'Reddit voting' },
+            { text: 'menu', expected: null, context: 'Menu button' },
+            { text: 'settings', expected: null, context: 'Settings link' },
+            
+            // True positives that should be detected
+            { text: 'next', expected: 'next', context: 'Simple next button' },
+            { text: 'Next Page', expected: 'next', context: 'Explicit next page' },
+            { text: 'previous', expected: 'previous', context: 'Simple previous button' },
+            { text: 'Previous Page', expected: 'previous', context: 'Explicit previous page' },
+            { text: '→', expected: 'next', context: 'Right arrow symbol' },
+            { text: '←', expected: 'previous', context: 'Left arrow symbol' },
+            { text: 'load more posts', expected: 'next', context: 'Load more content' },
+            { text: 'show more posts', expected: 'next', context: 'Show more content' },
+            { text: 'newer posts', expected: 'previous', context: 'Temporal navigation' },
+            { text: 'older posts', expected: 'next', context: 'Temporal navigation' },
+            
+            // Edge cases
+            { text: 'more', expected: null, context: 'Generic "more" without context' },
+            { text: 'back', expected: 'previous', context: 'Simple back' },
+            { text: 'forward', expected: 'next', context: 'Simple forward' },
+            { text: '', expected: null, context: 'Empty text' },
+            { text: 'This is a very long text that should not be considered navigation because it is too verbose and contains too much information for a simple navigation button', expected: null, context: 'Very long text' }
+        ];
+        
+        const allTestCases = [...defaultTestCases, ...testCases];
+        
+        let passed = 0;
+        let failed = 0;
+        
+        allTestCases.forEach((testCase, index) => {
+            const { text, expected, context } = testCase;
+            
+            // Create a mock element for testing
+            const mockElement = document.createElement('a');
+            mockElement.textContent = text;
+            
+            // Test the detection
+            const result = this.determineNavigationDirection(mockElement, text);
+            
+            const success = result === expected;
+            if (success) {
+                passed++;
+                console.log(`✅ Test ${index + 1}: "${text}" → ${result || 'null'} (${context})`);
+            } else {
+                failed++;
+                console.log(`❌ Test ${index + 1}: "${text}" → Expected: ${expected || 'null'}, Got: ${result || 'null'} (${context})`);
+                
+                // Additional debugging for failed tests
+                const ariaLabel = mockElement.getAttribute('aria-label') || '';
+                const title = mockElement.getAttribute('title') || '';
+                const fullText = `${text} ${ariaLabel} ${title}`.toLowerCase().trim();
+                
+                console.log(`   📋 Debug info:`);
+                console.log(`      • False positive check: ${this.containsFalsePositivePatterns(fullText)}`);
+                
+                const nextScore = this.calculatePatternScore(fullText, this.intelligentNavigationPatterns.next);
+                const prevScore = this.calculatePatternScore(fullText, this.intelligentNavigationPatterns.previous);
+                const penalty = this.calculateContentPenalty(fullText);
+                
+                console.log(`      • Next score: ${nextScore}, Prev score: ${prevScore}, Penalty: ${penalty}`);
+                console.log(`      • Final scores: Next=${nextScore + penalty}, Prev=${prevScore + penalty}`);
+            }
+        });
+        
+        console.log(`\n📊 Test Results: ${passed} passed, ${failed} failed out of ${allTestCases.length} tests`);
+        console.log(`Success Rate: ${((passed / allTestCases.length) * 100).toFixed(1)}%\n`);
+        
+        if (failed > 0) {
+            console.log('🔧 Consider adjusting the false positive patterns or scoring thresholds based on failed tests.');
+        }
+        
+        return { passed, failed, total: allTestCases.length };
     }
 
     /**
@@ -1130,16 +1573,6 @@ class SmartNavigationKeyBinder {
     }
 
     /**
-     * Enables debug mode for verbose logging
-     */
-    enableDebugMode() {
-        this.debugMode = true;
-        this.detector.debugMode = true;
-        this.keyManager.debugMode = true;
-        console.log('[Side Scroller] Debug mode enabled');
-    }
-
-    /**
      * Starts watching for DOM changes that might affect navigation detection
      */
     startDOMWatcher() {
@@ -1240,6 +1673,28 @@ class SmartNavigationKeyBinder {
             this.debugLog('Reinitializing due to DOM changes...');
             this.reinitialize();
         }, 500); // 500ms delay to debounce rapid changes
+    }
+
+    /**
+     * Enables debug mode for verbose logging across all components
+     */
+    enableDebugMode() {
+        this.debugMode = true;
+        this.detector.enableDebugMode();
+        this.keyManager.debugMode = true;
+        this.trainingMode.debugMode = true;
+        console.log('[Side Scroller] Debug mode enabled for all components');
+    }
+
+    /**
+     * Disables debug mode across all components
+     */
+    disableDebugMode() {
+        this.debugMode = false;
+        this.detector.disableDebugMode();
+        this.keyManager.debugMode = false;
+        this.trainingMode.debugMode = false;
+        console.log('[Side Scroller] Debug mode disabled for all components');
     }
 }
 
@@ -1389,9 +1844,7 @@ function toggleDebugMode(enabled) {
         if (enabled) {
             smartNavigationBinder.enableDebugMode();
         } else {
-            smartNavigationBinder.debugMode = false;
-            smartNavigationBinder.detector.debugMode = false;
-            smartNavigationBinder.keyManager.debugMode = false;
+            smartNavigationBinder.disableDebugMode();
         }
     }
 }
@@ -1426,8 +1879,462 @@ async function getTrainingStatus() {
  */
 async function clearTrainingData() {
     if (typeof smartNavigationBinder !== 'undefined' && smartNavigationBinder) {
-        await smartNavigationBinder.trainingMode.clearTrainingData();
+        return await smartNavigationBinder.trainingMode.clearTrainingData();
+    }
+    return null;
+}
+
+/**
+ * Test navigation detection with intelligent content analysis
+ * Call this from console: testNavigationDetection()
+ */
+function testNavigationDetection(customTestCases = []) {
+    if (typeof smartNavigationBinder !== 'undefined' && smartNavigationBinder) {
+        return smartNavigationBinder.detector.testNavigationDetection(customTestCases);
+    } else {
+        console.log('❌ Side Scroller extension not initialized');
+        return null;
     }
 }
 
-console.log('[Side Scroller] Content script loaded successfully'); 
+/**
+ * Analyze a specific element on the page for navigation detection
+ * Usage: analyzeElement(document.querySelector('a[href*="community"]'))
+ */
+function analyzeElement(element) {
+    if (typeof smartNavigationBinder !== 'undefined' && smartNavigationBinder) {
+        if (!element) {
+            console.log('❌ No element provided');
+            return null;
+        }
+        
+        const detector = smartNavigationBinder.detector;
+        const elementText = detector.getElementText(element);
+        const direction = detector.determineNavigationDirection(element, elementText);
+        const score = direction ? detector.calculateElementScore(element, elementText, direction) : 0;
+        const browserUIAnalysis = detector.browserUIFilter.shouldExcludeElement(element);
+        
+        console.log('\n🔍 Element Analysis:');
+        console.log('Element:', element);
+        console.log('Text:', elementText);
+        console.log('Navigation Direction:', direction || 'none');
+        console.log('Score:', score);
+        console.log('Browser UI Excluded:', browserUIAnalysis);
+        console.log('False Positive Check:', detector.containsFalsePositivePatterns(elementText.toLowerCase()));
+        
+        return {
+            element,
+            text: elementText,
+            direction,
+            score,
+            browserUIExcluded: browserUIAnalysis,
+            isFalsePositive: detector.containsFalsePositivePatterns(elementText.toLowerCase())
+        };
+    } else {
+        console.log('❌ Side Scroller extension not initialized');
+        return null;
+    }
+}
+
+console.log('[Side Scroller] Content script loaded successfully');
+console.log('[Side Scroller] 🧠 Intelligent Content Analysis enabled - filters false positives like "community" on Reddit');
+console.log('[Side Scroller] 🧪 Test detection: Type "testNavigationDetection()" in console');
+console.log('[Side Scroller] 🔍 Analyze elements: Type "analyzeElement(element)" in console');
+
+/**
+ * Browser UI Element Filter
+ * Filters out browser UI elements, extension elements, and other non-page navigation elements
+ * to prevent conflicts with browser controls
+ */
+class BrowserUIElementFilter {
+    constructor() {
+        this.debugMode = false;
+        
+        // Browser UI zone definitions (top browser bar, sides, etc.)
+        this.browserUIZones = {
+            topBarHeight: 100, // Top browser bar and tabs area
+            bottomBarHeight: 50, // Bottom browser bar (if any)
+            sideMargin: 5, // Far left/right edges where browser controls might appear
+            minDistanceFromTopForWebContent: 120 // Minimum distance from top for valid web content
+        };
+        
+        // Known browser UI selectors and patterns
+        this.browserUISelectors = [
+            // Chrome/Chromium browser UI
+            '[class*="chrome-"]',
+            '[id*="chrome-"]',
+            '[class*="browser-"]',
+            '[id*="browser-"]',
+            
+            // Extension UI elements
+            '[class*="extension-"]',
+            '[id*="extension-"]',
+            '[class*="crx-"]',
+            '[id*="crx-"]',
+            
+            // Browser navigation specific
+            '[class*="navigation-bar"]',
+            '[class*="nav-bar"]',
+            '[class*="toolbar"]',
+            '[id*="toolbar"]',
+            
+            // Browser back/forward specific
+            '[aria-label*="Back"]',
+            '[aria-label*="Forward"]',
+            '[title*="Back"]',
+            '[title*="Forward"]',
+            '[alt*="Back"]',
+            '[alt*="Forward"]',
+            
+            // PDF viewer controls
+            '[class*="pdf-viewer"]',
+            '[id*="pdf-viewer"]',
+            '#viewerContainer',
+            '.toolbar'
+        ];
+        
+        // Known browser internal URLs and contexts
+        this.browserInternalURLPatterns = [
+            'chrome://',
+            'chrome-extension://',
+            'moz-extension://',
+            'safari-extension://',
+            'edge://',
+            'about:',
+            'view-source:',
+            'data:',
+            'javascript:',
+            'blob:'
+        ];
+        
+        // Size constraints for valid navigation elements
+        this.validElementSizeConstraints = {
+            minWidth: 8,
+            minHeight: 8,
+            maxWidth: 500, // Unusually large elements are often not navigation
+            maxHeight: 200,
+            minClickableArea: 64 // Minimum area for a reasonable click target
+        };
+        
+        // Z-index thresholds (browser UI often has very high z-index)
+        this.suspiciousZIndexThreshold = 2147483647; // Max z-index often used by browser UI
+        this.highZIndexThreshold = 999999; // Very high z-index threshold
+    }
+
+    /**
+     * Main filter method to determine if an element should be excluded as browser UI
+     */
+    shouldExcludeElement(element) {
+        const exclusionReasons = [];
+        
+        // Check browser internal URL context
+        if (this.isInBrowserInternalContext()) {
+            exclusionReasons.push('browser-internal-context');
+        }
+        
+        // Check position-based exclusions
+        const positionExclusion = this.checkPositionBasedExclusions(element);
+        if (positionExclusion) {
+            exclusionReasons.push(positionExclusion);
+        }
+        
+        // Check selector-based exclusions
+        const selectorExclusion = this.checkSelectorBasedExclusions(element);
+        if (selectorExclusion) {
+            exclusionReasons.push(selectorExclusion);
+        }
+        
+        // Check container-based exclusions
+        const containerExclusion = this.checkContainerBasedExclusions(element);
+        if (containerExclusion) {
+            exclusionReasons.push(containerExclusion);
+        }
+        
+        // Check size-based exclusions
+        const sizeExclusion = this.checkSizeBasedExclusions(element);
+        if (sizeExclusion) {
+            exclusionReasons.push(sizeExclusion);
+        }
+        
+        // Check z-index exclusions
+        const zIndexExclusion = this.checkZIndexExclusions(element);
+        if (zIndexExclusion) {
+            exclusionReasons.push(zIndexExclusion);
+        }
+        
+        // Check browser navigation specific exclusions
+        const browserNavExclusion = this.checkBrowserNavigationExclusions(element);
+        if (browserNavExclusion) {
+            exclusionReasons.push(browserNavExclusion);
+        }
+        
+        if (exclusionReasons.length > 0) {
+            this.debugLog(`🚫 Excluding element - Reasons: ${exclusionReasons.join(', ')} - Element: ${this.getElementDescription(element)}`);
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Check if current page is in a browser internal context
+     */
+    isInBrowserInternalContext() {
+        const currentURL = window.location.href;
+        return this.browserInternalURLPatterns.some(pattern => 
+            currentURL.startsWith(pattern)
+        );
+    }
+
+    /**
+     * Check position-based exclusions (top browser bar area, extreme edges)
+     */
+    checkPositionBasedExclusions(element) {
+        const rect = element.getBoundingClientRect();
+        const elementCenterY = rect.top + rect.height / 2;
+        const elementCenterX = rect.left + rect.width / 2;
+        
+        // Check if element is in top browser UI zone
+        if (elementCenterY < this.browserUIZones.minDistanceFromTopForWebContent) {
+            return 'top-browser-ui-zone';
+        }
+        
+        // Check if element is in extreme left/right edges (potential browser UI)
+        if (elementCenterX < this.browserUIZones.sideMargin || 
+            elementCenterX > window.innerWidth - this.browserUIZones.sideMargin) {
+            return 'extreme-edge-position';
+        }
+        
+        // Check if element is positioned outside viewport (could be browser UI)
+        if (rect.top < 0 || rect.left < -50 || 
+            rect.right > window.innerWidth + 50 || 
+            rect.bottom > window.innerHeight + 50) {
+            return 'outside-viewport-bounds';
+        }
+        
+        return null;
+    }
+
+    /**
+     * Check selector-based exclusions (known browser UI patterns)
+     */
+    checkSelectorBasedExclusions(element) {
+        // Check direct selector matches
+        for (const selector of this.browserUISelectors) {
+            try {
+                if (element.matches(selector)) {
+                    return `matches-browser-ui-selector: ${selector}`;
+                }
+            } catch (e) {
+                // Invalid selector, skip
+                continue;
+            }
+        }
+        
+        // Check element attributes for browser UI patterns
+        const attributesToCheck = ['class', 'id', 'data-testid', 'data-component'];
+        for (const attr of attributesToCheck) {
+            const value = element.getAttribute(attr);
+            if (value) {
+                const lowerValue = value.toLowerCase();
+                if (lowerValue.includes('browser') || 
+                    lowerValue.includes('chrome') || 
+                    lowerValue.includes('toolbar') ||
+                    lowerValue.includes('extension')) {
+                    return `browser-ui-attribute: ${attr}="${value}"`;
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Check container-based exclusions (elements inside browser UI containers)
+     */
+    checkContainerBasedExclusions(element) {
+        let currentElement = element.parentElement;
+        let depth = 0;
+        const maxDepth = 10; // Prevent infinite loops
+        
+        while (currentElement && depth < maxDepth) {
+            // Check if parent matches browser UI selectors
+            for (const selector of this.browserUISelectors) {
+                try {
+                    if (currentElement.matches(selector)) {
+                        return `inside-browser-ui-container: ${selector}`;
+                    }
+                } catch (e) {
+                    continue;
+                }
+            }
+            
+            // Check parent attributes
+            const parentClass = currentElement.className;
+            const parentId = currentElement.id;
+            
+            if (typeof parentClass === 'string') {
+                const lowerClass = parentClass.toLowerCase();
+                if (lowerClass.includes('browser') || 
+                    lowerClass.includes('chrome') || 
+                    lowerClass.includes('toolbar') ||
+                    lowerClass.includes('extension')) {
+                    return `inside-browser-ui-parent: class="${parentClass}"`;
+                }
+            }
+            
+            if (typeof parentId === 'string') {
+                const lowerId = parentId.toLowerCase();
+                if (lowerId.includes('browser') || 
+                    lowerId.includes('chrome') || 
+                    lowerId.includes('toolbar') ||
+                    lowerId.includes('extension')) {
+                    return `inside-browser-ui-parent: id="${parentId}"`;
+                }
+            }
+            
+            currentElement = currentElement.parentElement;
+            depth++;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Check size-based exclusions (unusually sized elements)
+     */
+    checkSizeBasedExclusions(element) {
+        const rect = element.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const area = width * height;
+        
+        // Check minimum size constraints
+        if (width < this.validElementSizeConstraints.minWidth || 
+            height < this.validElementSizeConstraints.minHeight) {
+            return `too-small: ${width}x${height}`;
+        }
+        
+        // Check maximum size constraints
+        if (width > this.validElementSizeConstraints.maxWidth || 
+            height > this.validElementSizeConstraints.maxHeight) {
+            return `too-large: ${width}x${height}`;
+        }
+        
+        // Check minimum clickable area
+        if (area < this.validElementSizeConstraints.minClickableArea) {
+            return `insufficient-click-area: ${area}px²`;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Check z-index exclusions (browser UI often has very high z-index)
+     */
+    checkZIndexExclusions(element) {
+        const style = window.getComputedStyle(element);
+        const zIndex = parseInt(style.zIndex);
+        
+        if (!isNaN(zIndex)) {
+            if (zIndex >= this.suspiciousZIndexThreshold) {
+                return `suspicious-z-index: ${zIndex}`;
+            }
+            
+            if (zIndex >= this.highZIndexThreshold) {
+                return `high-z-index: ${zIndex}`;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Check browser navigation specific exclusions (back/forward buttons)
+     */
+    checkBrowserNavigationExclusions(element) {
+        const textContent = element.textContent?.toLowerCase() || '';
+        const ariaLabel = element.getAttribute('aria-label')?.toLowerCase() || '';
+        const title = element.getAttribute('title')?.toLowerCase() || '';
+        const alt = element.getAttribute('alt')?.toLowerCase() || '';
+        
+        const allText = `${textContent} ${ariaLabel} ${title} ${alt}`;
+        
+        // Check for specific browser navigation terms
+        const browserNavTerms = [
+            'back to previous page',
+            'forward to next page',
+            'browser back',
+            'browser forward',
+            'go back',
+            'go forward',
+            'navigate back',
+            'navigate forward'
+        ];
+        
+        for (const term of browserNavTerms) {
+            if (allText.includes(term)) {
+                return `browser-navigation-term: ${term}`;
+            }
+        }
+        
+        // Check for browser-specific keyboard shortcuts in titles/labels
+        if (allText.includes('ctrl+') || allText.includes('cmd+') || 
+            allText.includes('alt+') || allText.includes('⌘+')) {
+            return 'browser-keyboard-shortcut';
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get a descriptive string for an element (for debugging)
+     */
+    getElementDescription(element) {
+        const tag = element.tagName.toLowerCase();
+        const id = element.id ? `#${element.id}` : '';
+        const className = element.className ? `.${element.className.replace(/\s+/g, '.')}` : '';
+        const text = element.textContent?.trim().substring(0, 50) || '';
+        
+        return `${tag}${id}${className} "${text}"`;
+    }
+
+    /**
+     * Enable debug mode for detailed logging
+     */
+    enableDebugMode() {
+        this.debugMode = true;
+    }
+
+    /**
+     * Disable debug mode
+     */
+    disableDebugMode() {
+        this.debugMode = false;
+    }
+
+    /**
+     * Debug logging method
+     */
+    debugLog(message) {
+        if (this.debugMode) {
+            console.log(`[BrowserUIFilter] ${message}`);
+        }
+    }
+
+    /**
+     * Test all filter methods on an element and return detailed results
+     */
+    analyzeElementForDebugging(element) {
+        return {
+            shouldExclude: this.shouldExcludeElement(element),
+            positionCheck: this.checkPositionBasedExclusions(element),
+            selectorCheck: this.checkSelectorBasedExclusions(element),
+            containerCheck: this.checkContainerBasedExclusions(element),
+            sizeCheck: this.checkSizeBasedExclusions(element),
+            zIndexCheck: this.checkZIndexExclusions(element),
+            browserNavCheck: this.checkBrowserNavigationExclusions(element),
+            elementDescription: this.getElementDescription(element)
+        };
+    }
+} 

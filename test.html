@@ -274,6 +274,38 @@
             </div>
         </div>
 
+        <!-- Browser UI Filter Testing Section -->
+        <div class="test-controls">
+            <h3>🛡️ Browser UI Filter Testing</h3>
+            <p>Test the new browser UI element filtering to ensure browser controls are excluded from navigation detection.</p>
+            
+            <div class="control-grid">
+                <button class="test-button" onclick="runBrowserUIFilterTests()">
+                    🧪 Run Filter Tests
+                </button>
+                <button class="test-button" onclick="createMockBrowserElements()">
+                    🎭 Create Mock Browser Elements
+                </button>
+                <button class="test-button" onclick="testPositionFiltering()">
+                    📍 Test Position Filtering
+                </button>
+                <button class="test-button" onclick="testSizeFiltering()">
+                    📏 Test Size Filtering
+                </button>
+                <button class="test-button" onclick="clearMockElements()">
+                    🗑️ Clear Mock Elements
+                </button>
+                <button class="test-button" onclick="analyzeCurrentElements()">
+                    🔍 Analyze Current Elements
+                </button>
+            </div>
+            
+            <!-- Mock Browser Elements Container -->
+            <div id="mockBrowserElements" class="dynamic-container">
+                <!-- Mock elements will be added here -->
+            </div>
+        </div>
+
         <!-- Instructions -->
         <div class="instructions">
             <h3>📋 How to Test</h3>
@@ -471,6 +503,283 @@
                 addLog(`Extension message: ${event.data.message}`, 'info');
             }
         });
+
+        // Browser UI Filter Testing Functions
+        function runBrowserUIFilterTests() {
+            addLog('🧪 Starting Browser UI Filter Tests...', 'info');
+            
+            if (typeof smartNavigationBinder === 'undefined') {
+                addLog('❌ Extension not loaded', 'error');
+                return;
+            }
+            
+            const filter = smartNavigationBinder.detector.browserUIFilter;
+            filter.enableDebugMode();
+            
+            // Test cases
+            const testCases = [
+                {
+                    name: 'Mock Chrome Back Button',
+                    element: createTestElement('button', {
+                        'aria-label': 'Back to previous page',
+                        'class': 'chrome-navigation-button'
+                    }),
+                    shouldExclude: true
+                },
+                {
+                    name: 'Mock Extension UI',
+                    element: createTestElement('div', {
+                        'class': 'extension-popup-content',
+                        'id': 'chrome-extension-ui'
+                    }),
+                    shouldExclude: true
+                },
+                {
+                    name: 'Valid Page Navigation',
+                    element: createTestElement('a', {
+                        'href': '#next',
+                        'class': 'next-page-link',
+                        'textContent': 'Next Page'
+                    }),
+                    shouldExclude: false
+                },
+                {
+                    name: 'High Z-Index Element',
+                    element: createTestElement('div', {
+                        'style': 'z-index: 2147483647; position: fixed;'
+                    }),
+                    shouldExclude: true
+                }
+            ];
+            
+            let passed = 0;
+            let failed = 0;
+            
+            testCases.forEach((testCase, index) => {
+                const result = filter.shouldExcludeElement(testCase.element);
+                const analysis = filter.analyzeElementForDebugging(testCase.element);
+                
+                if (result === testCase.shouldExclude) {
+                    addLog(`✅ Test ${index + 1}: ${testCase.name} - PASSED`, 'success');
+                    passed++;
+                } else {
+                    addLog(`❌ Test ${index + 1}: ${testCase.name} - FAILED`, 'error');
+                    addLog(`   Expected exclude: ${testCase.shouldExclude}, Got: ${result}`, 'error');
+                    failed++;
+                }
+            });
+            
+            addLog(`📊 Filter Tests Complete: ${passed} passed, ${failed} failed`, 'info');
+        }
+        
+        function createMockBrowserElements() {
+            addLog('🎭 Creating mock browser elements...', 'info');
+            
+            const container = document.getElementById('mockBrowserElements');
+            container.innerHTML = '';
+            
+            // Mock browser back button (should be excluded)
+            const backButton = createTestElement('button', {
+                'aria-label': 'Back to previous page',
+                'class': 'mock-browser-back',
+                'style': 'position: absolute; top: 10px; left: 10px; z-index: 999999;',
+                'textContent': '← Back'
+            });
+            
+            // Mock browser forward button (should be excluded)
+            const forwardButton = createTestElement('button', {
+                'title': 'Forward to next page',
+                'class': 'mock-browser-forward',
+                'style': 'position: absolute; top: 10px; right: 10px; z-index: 999999;',
+                'textContent': 'Forward →'
+            });
+            
+            // Mock extension popup (should be excluded)
+            const extensionPopup = createTestElement('div', {
+                'class': 'extension-popup-mock',
+                'id': 'chrome-extension-test',
+                'style': 'position: absolute; top: 50px; left: 50px; width: 200px; height: 100px; background: rgba(255,0,0,0.3); border: 1px solid red;',
+                'textContent': 'Mock Extension UI'
+            });
+            
+            // Valid navigation element (should NOT be excluded)
+            const validNav = createTestElement('a', {
+                'href': '#test',
+                'class': 'valid-navigation-test',
+                'style': 'position: absolute; bottom: 10px; right: 50%; transform: translateX(50%); padding: 10px; background: rgba(0,255,0,0.3); border: 1px solid green;',
+                'textContent': 'Valid Next Page'
+            });
+            
+            container.appendChild(backButton);
+            container.appendChild(forwardButton);
+            container.appendChild(extensionPopup);
+            container.appendChild(validNav);
+            
+            addLog('✅ Mock browser elements created', 'success');
+        }
+        
+        function testPositionFiltering() {
+            addLog('📍 Testing position-based filtering...', 'info');
+            
+            if (typeof smartNavigationBinder === 'undefined') {
+                addLog('❌ Extension not loaded', 'error');
+                return;
+            }
+            
+            const filter = smartNavigationBinder.detector.browserUIFilter;
+            
+            // Create elements at different positions
+            const testElements = [
+                {
+                    name: 'Top UI Zone Element',
+                    position: { top: 50, left: 200, width: 100, height: 30 },
+                    shouldExclude: true
+                },
+                {
+                    name: 'Valid Content Area',
+                    position: { top: 300, left: 200, width: 100, height: 30 },
+                    shouldExclude: false
+                },
+                {
+                    name: 'Outside Viewport',
+                    position: { top: -100, left: 200, width: 100, height: 30 },
+                    shouldExclude: true
+                }
+            ];
+            
+            testElements.forEach((test, index) => {
+                const element = createMockElementWithPosition('button', test.position);
+                const result = filter.checkPositionBasedExclusions(element);
+                const actualExclude = result !== null;
+                
+                if (actualExclude === test.shouldExclude) {
+                    addLog(`✅ Position Test ${index + 1}: ${test.name} - PASSED`, 'success');
+                } else {
+                    addLog(`❌ Position Test ${index + 1}: ${test.name} - FAILED (reason: ${result})`, 'error');
+                }
+            });
+        }
+        
+        function testSizeFiltering() {
+            addLog('📏 Testing size-based filtering...', 'info');
+            
+            if (typeof smartNavigationBinder === 'undefined') {
+                addLog('❌ Extension not loaded', 'error');
+                return;
+            }
+            
+            const filter = smartNavigationBinder.detector.browserUIFilter;
+            
+            const testElements = [
+                {
+                    name: 'Too Small Element',
+                    position: { top: 300, left: 200, width: 3, height: 3 },
+                    shouldExclude: true
+                },
+                {
+                    name: 'Too Large Element', 
+                    position: { top: 300, left: 200, width: 800, height: 400 },
+                    shouldExclude: true
+                },
+                {
+                    name: 'Normal Size Element',
+                    position: { top: 300, left: 200, width: 120, height: 40 },
+                    shouldExclude: false
+                }
+            ];
+            
+            testElements.forEach((test, index) => {
+                const element = createMockElementWithPosition('button', test.position);
+                const result = filter.checkSizeBasedExclusions(element);
+                const actualExclude = result !== null;
+                
+                if (actualExclude === test.shouldExclude) {
+                    addLog(`✅ Size Test ${index + 1}: ${test.name} - PASSED`, 'success');
+                } else {
+                    addLog(`❌ Size Test ${index + 1}: ${test.name} - FAILED (reason: ${result})`, 'error');
+                }
+            });
+        }
+        
+        function analyzeCurrentElements() {
+            addLog('🔍 Analyzing current page elements...', 'info');
+            
+            if (typeof smartNavigationBinder === 'undefined') {
+                addLog('❌ Extension not loaded', 'error');
+                return;
+            }
+            
+            const detector = smartNavigationBinder.detector;
+            const filter = detector.browserUIFilter;
+            
+            // Get all clickable elements before and after filtering
+            const allElements = document.querySelectorAll('a[href], button, [onclick], [role="button"]');
+            addLog(`📋 Found ${allElements.length} potentially clickable elements`, 'info');
+            
+            const filteredElements = detector.getAllClickableElements();
+            addLog(`✅ After filtering: ${filteredElements.length} valid elements`, 'success');
+            
+            const excludedCount = allElements.length - filteredElements.length;
+            addLog(`🚫 Excluded ${excludedCount} elements as browser UI`, 'info');
+            
+            // Analyze a few elements for detailed debugging
+            let analyzed = 0;
+            Array.from(allElements).slice(0, 5).forEach((element, index) => {
+                const analysis = filter.analyzeElementForDebugging(element);
+                addLog(`🔬 Element ${index + 1}: ${analysis.elementDescription}`, 'info');
+                addLog(`   Should exclude: ${analysis.shouldExclude}`, 'info');
+                if (analysis.shouldExclude) {
+                    const reasons = [
+                        analysis.positionCheck,
+                        analysis.selectorCheck, 
+                        analysis.containerCheck,
+                        analysis.sizeCheck,
+                        analysis.zIndexCheck,
+                        analysis.browserNavCheck
+                    ].filter(reason => reason !== null);
+                    addLog(`   Exclusion reasons: ${reasons.join(', ')}`, 'info');
+                }
+                analyzed++;
+            });
+            
+            addLog(`📊 Analysis complete: examined ${analyzed} elements`, 'info');
+        }
+        
+        function clearMockElements() {
+            addLog('🗑️ Clearing mock elements...', 'info');
+            document.getElementById('mockBrowserElements').innerHTML = '';
+            addLog('✅ Mock elements cleared', 'success');
+        }
+        
+        function createTestElement(tagName, attributes = {}) {
+            const element = document.createElement(tagName);
+            
+            Object.entries(attributes).forEach(([key, value]) => {
+                if (key === 'textContent') {
+                    element.textContent = value;
+                } else {
+                    element.setAttribute(key, value);
+                }
+            });
+            
+            return element;
+        }
+        
+        function createMockElementWithPosition(tagName, position) {
+            const element = createTestElement(tagName);
+            
+            // Mock getBoundingClientRect
+            element.getBoundingClientRect = () => ({
+                top: position.top,
+                left: position.left,
+                right: position.left + position.width,
+                bottom: position.top + position.height,
+                width: position.width,
+                height: position.height
+            });
+            
+            return element;
+        }
     </script>
 </body>
 </html> 

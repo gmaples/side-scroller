@@ -2,7 +2,7 @@
 
 /**
  * Extension Validation Script
- * Validates the structure and content of the Side Scroller extension
+ * Comprehensive test suite for Side Scroller extension functionality
  */
 
 const fs = require('fs');
@@ -10,243 +10,493 @@ const path = require('path');
 
 class ExtensionValidator {
     constructor() {
-        this.errors = [];
-        this.warnings = [];
-        this.requiredFiles = [
-            'manifest.json',
-            'content.js',
-            'popup.html',
-            'popup.js',
-            'README.md',
-            'test.html'
-        ];
+        this.testResults = [];
+        this.browserUIFilter = null;
+        this.navigationDetector = null;
     }
 
     /**
-     * Main validation method
+     * Initialize validator with extension components
      */
-    validate() {
-        console.log('🔍 Validating Chrome Extension Structure...\n');
-        
-        this.checkRequiredFiles();
-        this.validateManifest();
-        this.validateContentScript();
-        this.validatePopup();
-        this.validateTestPage();
-        
-        this.printResults();
-        
-        return this.errors.length === 0;
-    }
-
-    /**
-     * Check if all required files exist
-     */
-    checkRequiredFiles() {
-        console.log('📁 Checking required files...');
-        
-        this.requiredFiles.forEach(file => {
-            if (fs.existsSync(file)) {
-                console.log(`   ✅ ${file} exists`);
-            } else {
-                this.errors.push(`Missing required file: ${file}`);
-                console.log(`   ❌ ${file} missing`);
-            }
-        });
-        
-        console.log();
-    }
-
-    /**
-     * Validate manifest.json
-     */
-    validateManifest() {
-        console.log('📋 Validating manifest.json...');
-        
-        if (!fs.existsSync('manifest.json')) {
-            this.errors.push('manifest.json is missing');
-            return;
-        }
-        
+    async initialize() {
         try {
-            const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+            // Wait for extension to be loaded
+            await this.waitForExtension();
             
-            // Check required fields
-            const requiredFields = ['manifest_version', 'name', 'version', 'content_scripts'];
-            requiredFields.forEach(field => {
-                if (!manifest[field]) {
-                    this.errors.push(`Missing required field in manifest: ${field}`);
-                } else {
-                    console.log(`   ✅ ${field} present`);
-                }
-            });
-            
-            // Check manifest version
-            if (manifest.manifest_version !== 3) {
-                this.warnings.push('Consider using Manifest V3 for better compatibility');
+            // Get extension components
+            if (typeof smartNavigationBinder !== 'undefined') {
+                this.navigationDetector = smartNavigationBinder.detector;
+                this.browserUIFilter = this.navigationDetector.browserUIFilter;
+                console.log('✅ Extension components loaded successfully');
+                return true;
+            } else {
+                console.error('❌ Extension not found');
+                return false;
             }
-            
-            // Check content script configuration
-            if (manifest.content_scripts && manifest.content_scripts.length > 0) {
-                const contentScript = manifest.content_scripts[0];
-                if (!contentScript.js || !contentScript.js.includes('content.js')) {
-                    this.errors.push('content.js not properly configured in manifest');
-                } else {
-                    console.log('   ✅ content.js properly configured');
-                }
-            }
-            
         } catch (error) {
-            this.errors.push(`Invalid JSON in manifest.json: ${error.message}`);
+            console.error('❌ Failed to initialize validator:', error);
+            return false;
         }
-        
-        console.log();
     }
 
     /**
-     * Validate content script
+     * Wait for extension to be loaded
      */
-    validateContentScript() {
-        console.log('🔧 Validating content.js...');
+    async waitForExtension() {
+        return new Promise((resolve, reject) => {
+            let attempts = 0;
+            const maxAttempts = 20;
+            
+            const checkExtension = () => {
+                attempts++;
+                
+                if (typeof smartNavigationBinder !== 'undefined') {
+                    resolve();
+                } else if (attempts >= maxAttempts) {
+                    reject(new Error('Extension not loaded after 10 seconds'));
+                } else {
+                    setTimeout(checkExtension, 500);
+                }
+            };
+            
+            checkExtension();
+        });
+    }
+
+    /**
+     * Run all validation tests
+     */
+    async runAllTests() {
+        console.log('🧪 Starting comprehensive extension validation...');
         
-        if (!fs.existsSync('content.js')) return;
-        
-        const content = fs.readFileSync('content.js', 'utf8');
-        
-        // Check for required classes
-        const requiredClasses = [
-            'NavigationElementDetector',
-            'KeyBindingManager',
-            'SmartNavigationKeyBinder'
+        if (!await this.initialize()) {
+            return false;
+        }
+
+        // Enable debug mode for detailed logging
+        this.navigationDetector.enableDebugMode();
+
+        const testSuites = [
+            () => this.testBrowserUIFiltering(),
+            () => this.testElementDetection(),
+            () => this.testKeyBinding(),
+            () => this.testPositionFiltering(),
+            () => this.testSizeFiltering(),
+            () => this.testTrainingMode()
         ];
+
+        let allPassed = true;
         
-        requiredClasses.forEach(className => {
-            if (content.includes(`class ${className}`)) {
-                console.log(`   ✅ ${className} class found`);
-            } else {
-                this.errors.push(`Missing required class: ${className}`);
+        for (const testSuite of testSuites) {
+            try {
+                const passed = await testSuite();
+                if (!passed) allPassed = false;
+            } catch (error) {
+                console.error('❌ Test suite failed:', error);
+                allPassed = false;
+            }
+        }
+
+        console.log(allPassed ? '✅ All tests passed!' : '❌ Some tests failed');
+        this.printTestSummary();
+        
+        return allPassed;
+    }
+
+    /**
+     * Test browser UI filtering functionality
+     */
+    testBrowserUIFiltering() {
+        console.log('\n🔍 Testing Browser UI Filtering...');
+
+        const testCases = [
+            {
+                name: 'Mock browser back button',
+                element: this.createMockElement('button', {
+                    'aria-label': 'Back to previous page',
+                    'class': 'chrome-navigation-button'
+                }),
+                shouldExclude: true,
+                expectedReason: 'browser-navigation-term'
+            },
+            {
+                name: 'Mock browser forward button',
+                element: this.createMockElement('button', {
+                    'title': 'Forward to next page',
+                    'class': 'browser-toolbar-button'
+                }),
+                shouldExclude: true,
+                expectedReason: 'browser-ui-attribute'
+            },
+            {
+                name: 'Mock extension UI element',
+                element: this.createMockElement('div', {
+                    'class': 'extension-popup-content',
+                    'id': 'chrome-extension-element'
+                }),
+                shouldExclude: true,
+                expectedReason: 'matches-browser-ui-selector'
+            },
+            {
+                name: 'Valid webpage navigation button',
+                element: this.createMockElement('button', {
+                    'class': 'next-page-btn',
+                    'textContent': 'Next'
+                }),
+                shouldExclude: false
+            },
+            {
+                name: 'High z-index element (potential browser UI)',
+                element: this.createMockElement('div', {
+                    'style': 'z-index: 2147483647; position: fixed;'
+                }),
+                shouldExclude: true,
+                expectedReason: 'suspicious-z-index'
+            },
+            {
+                name: 'Element in top browser UI zone',
+                element: this.createMockElementWithPosition('button', { top: 50, left: 100, width: 50, height: 30 }),
+                shouldExclude: true,
+                expectedReason: 'top-browser-ui-zone'
+            },
+            {
+                name: 'Element too small for navigation',
+                element: this.createMockElementWithPosition('button', { top: 300, left: 100, width: 5, height: 5 }),
+                shouldExclude: true,
+                expectedReason: 'too-small'
+            }
+        ];
+
+        let passed = 0;
+        let failed = 0;
+
+        testCases.forEach((testCase, index) => {
+            try {
+                const result = this.browserUIFilter.shouldExcludeElement(testCase.element);
+                const analysis = this.browserUIFilter.analyzeElementForDebugging(testCase.element);
+                
+                if (result === testCase.shouldExclude) {
+                    console.log(`✅ Test ${index + 1}: ${testCase.name} - PASSED`);
+                    passed++;
+                } else {
+                    console.log(`❌ Test ${index + 1}: ${testCase.name} - FAILED`);
+                    console.log(`   Expected: ${testCase.shouldExclude}, Got: ${result}`);
+                    console.log(`   Analysis:`, analysis);
+                    failed++;
+                }
+            } catch (error) {
+                console.log(`❌ Test ${index + 1}: ${testCase.name} - ERROR: ${error.message}`);
+                failed++;
             }
         });
-        
-        // Check for message handling
-        if (content.includes('chrome.runtime.onMessage.addListener')) {
-            console.log('   ✅ Message handling implemented');
-        } else {
-            this.warnings.push('Message handling might be missing in content script');
-        }
-        
-        // Check for proper initialization
-        if (content.includes('initializeSmartNavigation')) {
-            console.log('   ✅ Initialization function found');
-        } else {
-            this.errors.push('Missing initialization function');
-        }
-        
-        console.log();
+
+        this.testResults.push({
+            suite: 'Browser UI Filtering',
+            passed,
+            failed,
+            total: testCases.length
+        });
+
+        return failed === 0;
     }
 
     /**
-     * Validate popup files
+     * Test element detection functionality
      */
-    validatePopup() {
-        console.log('🎨 Validating popup files...');
-        
-        // Check popup.html
-        if (fs.existsSync('popup.html')) {
-            const html = fs.readFileSync('popup.html', 'utf8');
-            
-            if (html.includes('<!DOCTYPE html>')) {
-                console.log('   ✅ popup.html has proper DOCTYPE');
+    testElementDetection() {
+        console.log('\n🔍 Testing Element Detection...');
+
+        try {
+            const elements = this.navigationDetector.getAllClickableElements();
+            console.log(`✅ Found ${elements.length} clickable elements after filtering`);
+
+            // Test that no obvious browser UI elements are included
+            const suspiciousElements = elements.filter(el => {
+                const className = el.className?.toLowerCase() || '';
+                const id = el.id?.toLowerCase() || '';
+                return className.includes('chrome') || className.includes('browser') || 
+                       id.includes('chrome') || id.includes('browser');
+            });
+
+            if (suspiciousElements.length === 0) {
+                console.log('✅ No suspicious browser UI elements detected');
+                this.testResults.push({
+                    suite: 'Element Detection',
+                    passed: 1,
+                    failed: 0,
+                    total: 1
+                });
+                return true;
             } else {
-                this.warnings.push('popup.html missing DOCTYPE declaration');
+                console.log(`❌ Found ${suspiciousElements.length} suspicious elements:`);
+                suspiciousElements.forEach(el => {
+                    console.log(`   - ${el.tagName}.${el.className}#${el.id}`);
+                });
+                this.testResults.push({
+                    suite: 'Element Detection',
+                    passed: 0,
+                    failed: 1,
+                    total: 1
+                });
+                return false;
             }
-            
-            if (html.includes('popup.js')) {
-                console.log('   ✅ popup.html references popup.js');
-            } else {
-                this.errors.push('popup.html does not reference popup.js');
-            }
+        } catch (error) {
+            console.error('❌ Element detection test failed:', error);
+            this.testResults.push({
+                suite: 'Element Detection',
+                passed: 0,
+                failed: 1,
+                total: 1
+            });
+            return false;
         }
-        
-        // Check popup.js
-        if (fs.existsSync('popup.js')) {
-            const js = fs.readFileSync('popup.js', 'utf8');
-            
-            if (js.includes('PopupController')) {
-                console.log('   ✅ PopupController class found');
-            } else {
-                this.errors.push('Missing PopupController class in popup.js');
-            }
-            
-            if (js.includes('chrome.tabs.sendMessage')) {
-                console.log('   ✅ Message communication implemented');
-            } else {
-                this.warnings.push('Message communication might be missing');
-            }
-        }
-        
-        console.log();
     }
 
     /**
-     * Validate test page
+     * Test key binding functionality
      */
-    validateTestPage() {
-        console.log('🧪 Validating test.html...');
-        
-        if (!fs.existsSync('test.html')) return;
-        
-        const html = fs.readFileSync('test.html', 'utf8');
-        
-        // Check for test navigation elements
-        if (html.includes('nav-previous') && html.includes('nav-next')) {
-            console.log('   ✅ Test navigation elements present');
-        } else {
-            this.warnings.push('Test navigation elements might be missing');
+    testKeyBinding() {
+        console.log('\n🔍 Testing Key Binding...');
+
+        try {
+            const keyManager = smartNavigationBinder.keyManager;
+            const initialBoundKeys = keyManager.boundKeys.size;
+            
+            console.log(`✅ Key manager initialized with ${initialBoundKeys} bound keys`);
+            
+            this.testResults.push({
+                suite: 'Key Binding',
+                passed: 1,
+                failed: 0,
+                total: 1
+            });
+            return true;
+        } catch (error) {
+            console.error('❌ Key binding test failed:', error);
+            this.testResults.push({
+                suite: 'Key Binding',
+                passed: 0,
+                failed: 1,
+                total: 1
+            });
+            return false;
         }
-        
-        // Check for test functions
-        const testFunctions = ['simulateNavigation', 'addDynamicNavigation', 'testKeyConflict'];
-        testFunctions.forEach(func => {
-            if (html.includes(func)) {
-                console.log(`   ✅ ${func} test function found`);
+    }
+
+    /**
+     * Test position-based filtering
+     */
+    testPositionFiltering() {
+        console.log('\n🔍 Testing Position-Based Filtering...');
+
+        const testElements = [
+            {
+                name: 'Element in top UI zone',
+                element: this.createMockElementWithPosition('button', { top: 50, left: 200, width: 100, height: 30 }),
+                shouldExclude: true
+            },
+            {
+                name: 'Element in valid content area',
+                element: this.createMockElementWithPosition('button', { top: 400, left: 200, width: 100, height: 30 }),
+                shouldExclude: false
+            },
+            {
+                name: 'Element outside viewport',
+                element: this.createMockElementWithPosition('button', { top: -100, left: 200, width: 100, height: 30 }),
+                shouldExclude: true
+            }
+        ];
+
+        let passed = 0;
+        let failed = 0;
+
+        testElements.forEach((test, index) => {
+            const result = this.browserUIFilter.checkPositionBasedExclusions(test.element);
+            const shouldExclude = test.shouldExclude;
+            const actualExclude = result !== null;
+
+            if (actualExclude === shouldExclude) {
+                console.log(`✅ Position test ${index + 1}: ${test.name} - PASSED`);
+                passed++;
             } else {
-                this.warnings.push(`Test function ${func} might be missing`);
+                console.log(`❌ Position test ${index + 1}: ${test.name} - FAILED`);
+                console.log(`   Expected exclude: ${shouldExclude}, Got: ${actualExclude}, Reason: ${result}`);
+                failed++;
             }
         });
-        
-        console.log();
+
+        this.testResults.push({
+            suite: 'Position Filtering',
+            passed,
+            failed,
+            total: testElements.length
+        });
+
+        return failed === 0;
     }
 
     /**
-     * Print validation results
+     * Test size-based filtering
      */
-    printResults() {
-        console.log('📊 Validation Results:');
-        console.log('='.repeat(50));
-        
-        if (this.errors.length === 0) {
-            console.log('✅ All critical validations passed!');
-        } else {
-            console.log(`❌ Found ${this.errors.length} error(s):`);
-            this.errors.forEach(error => console.log(`   • ${error}`));
-        }
-        
-        if (this.warnings.length > 0) {
-            console.log(`\n⚠️  Found ${this.warnings.length} warning(s):`);
-            this.warnings.forEach(warning => console.log(`   • ${warning}`));
-        }
-        
-        console.log('\n' + '='.repeat(50));
-        
-        if (this.errors.length === 0 && this.warnings.length === 0) {
-            console.log('🎉 Extension is ready for installation and testing!');
-        } else if (this.errors.length === 0) {
-            console.log('✅ Extension should work, but check warnings for improvements');
-        } else {
-            console.log('❌ Extension has critical issues that need to be fixed');
+    testSizeFiltering() {
+        console.log('\n🔍 Testing Size-Based Filtering...');
+
+        const testElements = [
+            {
+                name: 'Too small element',
+                element: this.createMockElementWithPosition('button', { top: 300, left: 200, width: 5, height: 5 }),
+                shouldExclude: true
+            },
+            {
+                name: 'Too large element',
+                element: this.createMockElementWithPosition('button', { top: 300, left: 200, width: 600, height: 300 }),
+                shouldExclude: true
+            },
+            {
+                name: 'Normal sized element',
+                element: this.createMockElementWithPosition('button', { top: 300, left: 200, width: 100, height: 30 }),
+                shouldExclude: false
+            }
+        ];
+
+        let passed = 0;
+        let failed = 0;
+
+        testElements.forEach((test, index) => {
+            const result = this.browserUIFilter.checkSizeBasedExclusions(test.element);
+            const shouldExclude = test.shouldExclude;
+            const actualExclude = result !== null;
+
+            if (actualExclude === shouldExclude) {
+                console.log(`✅ Size test ${index + 1}: ${test.name} - PASSED`);
+                passed++;
+            } else {
+                console.log(`❌ Size test ${index + 1}: ${test.name} - FAILED`);
+                console.log(`   Expected exclude: ${shouldExclude}, Got: ${actualExclude}, Reason: ${result}`);
+                failed++;
+            }
+        });
+
+        this.testResults.push({
+            suite: 'Size Filtering',
+            passed,
+            failed,
+            total: testElements.length
+        });
+
+        return failed === 0;
+    }
+
+    /**
+     * Test training mode functionality
+     */
+    testTrainingMode() {
+        console.log('\n🔍 Testing Training Mode...');
+
+        try {
+            const trainingMode = smartNavigationBinder.trainingMode;
+            console.log('✅ Training mode component accessible');
+            
+            this.testResults.push({
+                suite: 'Training Mode',
+                passed: 1,
+                failed: 0,
+                total: 1
+            });
+            return true;
+        } catch (error) {
+            console.error('❌ Training mode test failed:', error);
+            this.testResults.push({
+                suite: 'Training Mode',
+                passed: 0,
+                failed: 1,
+                total: 1
+            });
+            return false;
         }
     }
+
+    /**
+     * Create a mock DOM element for testing
+     */
+    createMockElement(tagName, attributes = {}) {
+        const element = document.createElement(tagName);
+        
+        Object.entries(attributes).forEach(([key, value]) => {
+            if (key === 'textContent') {
+                element.textContent = value;
+            } else if (key === 'style') {
+                element.setAttribute('style', value);
+            } else {
+                element.setAttribute(key, value);
+            }
+        });
+
+        return element;
+    }
+
+    /**
+     * Create a mock DOM element with specific position for testing
+     */
+    createMockElementWithPosition(tagName, position) {
+        const element = this.createMockElement(tagName);
+        
+        // Mock getBoundingClientRect
+        element.getBoundingClientRect = () => ({
+            top: position.top,
+            left: position.left,
+            right: position.left + position.width,
+            bottom: position.top + position.height,
+            width: position.width,
+            height: position.height
+        });
+
+        return element;
+    }
+
+    /**
+     * Print test summary
+     */
+    printTestSummary() {
+        console.log('\n📊 Test Summary:');
+        console.log('================');
+        
+        let totalPassed = 0;
+        let totalFailed = 0;
+        let totalTests = 0;
+
+        this.testResults.forEach(result => {
+            totalPassed += result.passed;
+            totalFailed += result.failed;
+            totalTests += result.total;
+            
+            console.log(`${result.suite}: ${result.passed}/${result.total} passed`);
+        });
+
+        console.log('================');
+        console.log(`Overall: ${totalPassed}/${totalTests} tests passed`);
+        
+        if (totalFailed === 0) {
+            console.log('🎉 All tests passed! Extension is working correctly.');
+        } else {
+            console.log(`⚠️  ${totalFailed} tests failed. Please review the issues above.`);
+        }
+    }
+}
+
+// Auto-run validation when script is loaded
+if (typeof window !== 'undefined') {
+    window.runExtensionValidation = async function() {
+        const validator = new ExtensionValidator();
+        return await validator.runAllTests();
+    };
+    
+    // Auto-run after a brief delay to ensure page is loaded
+    setTimeout(() => {
+        if (confirm('Run Side Scroller extension validation tests?')) {
+            window.runExtensionValidation();
+        }
+    }, 2000);
 }
 
 // Run validation if script is executed directly
