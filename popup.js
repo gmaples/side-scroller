@@ -3,251 +3,246 @@
  * Handles the extension popup interface and user interactions
  */
 
-class PopupController {
-    constructor() {
-        this.isDebugMode = false;
-        this.currentTab = null;
-        this.statusCheckInterval = null;
+document.addEventListener('DOMContentLoaded', async () => {
+    // Get current tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    if (!tab) {
+        showError('Unable to access current tab');
+        return;
+    }
+
+    // Initialize popup
+    await initializePopup(tab.id);
+
+    // Set up event listeners
+    setupEventListeners(tab.id);
+});
+
+/**
+ * Initializes the popup with current extension status
+ */
+async function initializePopup(tabId) {
+    try {
+        // Get extension status
+        const response = await sendMessageToTab(tabId, { action: 'getStatus' });
         
-        this.initializeUI();
-        this.setupEventListeners();
-        this.loadCurrentTabStatus();
-    }
-
-    /**
-     * Initializes the popup UI elements
-     */
-    initializeUI() {
-        this.elements = {
-            loading: document.getElementById('loading'),
-            mainContent: document.getElementById('main-content'),
-            leftArrowStatus: document.getElementById('left-arrow-status'),
-            rightArrowStatus: document.getElementById('right-arrow-status'),
-            refreshBtn: document.getElementById('refresh-btn'),
-            debugBtn: document.getElementById('debug-btn')
-        };
-    }
-
-    /**
-     * Sets up event listeners for popup interactions
-     */
-    setupEventListeners() {
-        this.elements.refreshBtn.addEventListener('click', () => {
-            this.handleRefreshDetection();
-        });
-
-        this.elements.debugBtn.addEventListener('click', () => {
-            this.handleToggleDebugMode();
-        });
-
-        // Check status periodically while popup is open
-        this.statusCheckInterval = setInterval(() => {
-            this.updateStatusDisplay();
-        }, 2000);
-    }
-
-    /**
-     * Loads the current tab and initializes status checking
-     */
-    async loadCurrentTabStatus() {
-        try {
-            // Get current active tab
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            this.currentTab = tab;
-
-            // Wait a moment for content script to initialize
-            setTimeout(() => {
-                this.updateStatusDisplay();
-                this.showMainContent();
-            }, 1000);
-
-        } catch (error) {
-            console.error('Error loading tab status:', error);
-            this.showErrorState();
-        }
-    }
-
-    /**
-     * Updates the status display by querying the content script
-     */
-    async updateStatusDisplay() {
-        if (!this.currentTab) return;
-
-        try {
-            // Send message to content script to get current status
-            const response = await chrome.tabs.sendMessage(this.currentTab.id, {
-                action: 'getStatus'
-            });
-
-            if (response && response.status === 'success') {
-                this.displayNavigationStatus(response.data);
-            } else {
-                this.displayFallbackStatus();
-            }
-
-        } catch (error) {
-            // Content script might not be ready or available
-            this.displayFallbackStatus();
-        }
-    }
-
-    /**
-     * Displays the navigation status in the UI
-     */
-    displayNavigationStatus(statusData) {
-        const { previousPage, nextPage, leftArrowBound, rightArrowBound } = statusData;
-
-        // Update left arrow status
-        this.updateArrowStatus(
-            this.elements.leftArrowStatus,
-            previousPage,
-            leftArrowBound,
-            'previous'
-        );
-
-        // Update right arrow status
-        this.updateArrowStatus(
-            this.elements.rightArrowStatus,
-            nextPage,
-            rightArrowBound,
-            'next'
-        );
-    }
-
-    /**
-     * Updates the status indicator for a specific arrow key
-     */
-    updateArrowStatus(element, navigationElement, isBound, direction) {
-        // Clear existing classes
-        element.className = 'status-indicator';
-
-        if (navigationElement && isBound) {
-            element.classList.add('status-bound');
-            element.textContent = 'Bound';
-            element.title = `${direction} page navigation is active`;
-        } else if (navigationElement && !isBound) {
-            element.classList.add('status-not-bound');
-            element.textContent = 'Available';
-            element.title = `${direction} page navigation detected but key already in use`;
+        if (response && response.status === 'success') {
+            updateStatusDisplay(response.data);
         } else {
-            element.classList.add('status-not-detected');
-            element.textContent = 'Not Found';
-            element.title = `No ${direction} page navigation detected`;
+            showError('Extension not active on this page');
+        }
+
+        // Get training status
+        const trainingStatus = await getTrainingStatus(tabId);
+        updateTrainingDisplay(trainingStatus);
+
+    } catch (error) {
+        console.error('Failed to initialize popup:', error);
+        showError('Failed to connect to extension');
+    }
+}
+
+/**
+ * Sets up all event listeners for popup controls
+ */
+function setupEventListeners(tabId) {
+    // Refresh button
+    document.getElementById('refreshButton').addEventListener('click', async () => {
+        await refreshDetection(tabId);
+    });
+
+    // Debug toggle
+    document.getElementById('debugToggle').addEventListener('click', async () => {
+        await toggleDebugMode(tabId);
+    });
+
+    // Training mode toggle
+    document.getElementById('trainingToggle').addEventListener('click', async () => {
+        await toggleTrainingMode(tabId);
+    });
+
+    // Clear training data
+    document.getElementById('clearTraining').addEventListener('click', async () => {
+        await clearTrainingData(tabId);
+    });
+}
+
+/**
+ * Updates the status display with current detection results
+ */
+function updateStatusDisplay(data) {
+    const leftIndicator = document.getElementById('leftArrowIndicator');
+    const rightIndicator = document.getElementById('rightArrowIndicator');
+
+    // Update indicators
+    if (data.leftArrowBound) {
+        leftIndicator.classList.add('active');
+    } else {
+        leftIndicator.classList.remove('active');
+    }
+
+    if (data.rightArrowBound) {
+        rightIndicator.classList.add('active');
+    } else {
+        rightIndicator.classList.remove('active');
+    }
+
+    // Update debug button
+    const debugButton = document.getElementById('debugToggle');
+    debugButton.textContent = data.debugMode ? '🐛 Disable Debug Mode' : '🐛 Enable Debug Mode';
+}
+
+/**
+ * Updates the training mode display
+ */
+function updateTrainingDisplay(trainingStatus) {
+    const trainingToggle = document.getElementById('trainingToggle');
+    const trainingStatusElement = document.getElementById('trainingStatus');
+    const clearButton = document.getElementById('clearTraining');
+
+    if (trainingStatus.isActive) {
+        trainingToggle.textContent = 'Exit Training';
+        trainingToggle.classList.add('training-active');
+        trainingStatusElement.textContent = '👆 Click on navigation arrows to train';
+    } else {
+        trainingToggle.textContent = 'Start Training';
+        trainingToggle.classList.remove('training-active');
+        
+        if (trainingStatus.hasData) {
+            trainingStatusElement.textContent = `✅ Trained: ${trainingStatus.trainedElements} elements`;
+            clearButton.style.display = 'block';
+        } else {
+            trainingStatusElement.textContent = 'Click below to start training mode';
+            clearButton.style.display = 'none';
         }
     }
+}
 
-    /**
-     * Displays fallback status when content script is not available
-     */
-    displayFallbackStatus() {
-        const fallbackClass = 'status-not-detected';
-        const fallbackText = 'Unknown';
-
-        this.elements.leftArrowStatus.className = `status-indicator ${fallbackClass}`;
-        this.elements.leftArrowStatus.textContent = fallbackText;
-
-        this.elements.rightArrowStatus.className = `status-indicator ${fallbackClass}`;
-        this.elements.rightArrowStatus.textContent = fallbackText;
-    }
-
-    /**
-     * Handles refresh detection button click
-     */
-    async handleRefreshDetection() {
-        if (!this.currentTab) return;
-
-        // Update button to show loading state
-        const originalText = this.elements.refreshBtn.textContent;
-        this.elements.refreshBtn.textContent = '🔄 Refreshing...';
-        this.elements.refreshBtn.disabled = true;
-
-        try {
-            // Send message to content script to reinitialize
-            await chrome.tabs.sendMessage(this.currentTab.id, {
-                action: 'reinitialize'
-            });
-
-            // Update status after a short delay
-            setTimeout(() => {
-                this.updateStatusDisplay();
+/**
+ * Refreshes navigation detection
+ */
+async function refreshDetection(tabId) {
+    try {
+        const response = await sendMessageToTab(tabId, { action: 'reinitialize' });
+        
+        if (response && response.status === 'success') {
+            // Wait a moment for detection to complete
+            setTimeout(async () => {
+                const statusResponse = await sendMessageToTab(tabId, { action: 'getStatus' });
+                if (statusResponse && statusResponse.status === 'success') {
+                    updateStatusDisplay(statusResponse.data);
+                }
             }, 1000);
-
-        } catch (error) {
-            console.error('Error refreshing detection:', error);
-        } finally {
-            // Restore button state
-            setTimeout(() => {
-                this.elements.refreshBtn.textContent = originalText;
-                this.elements.refreshBtn.disabled = false;
-            }, 1500);
         }
+    } catch (error) {
+        console.error('Failed to refresh detection:', error);
+        showError('Failed to refresh detection');
     }
+}
 
-    /**
-     * Handles debug mode toggle button click
-     */
-    async handleToggleDebugMode() {
-        if (!this.currentTab) return;
+/**
+ * Toggles debug mode
+ */
+async function toggleDebugMode(tabId) {
+    try {
+        const debugButton = document.getElementById('debugToggle');
+        const isEnabled = debugButton.textContent.includes('Disable');
+        
+        const response = await sendMessageToTab(tabId, { 
+            action: 'toggleDebug', 
+            enabled: !isEnabled 
+        });
 
-        this.isDebugMode = !this.isDebugMode;
-
-        // Update button text
-        this.elements.debugBtn.textContent = this.isDebugMode 
-            ? '🐛 Debug ON' 
-            : '🐛 Toggle Debug Mode';
-
-        try {
-            // Send message to content script to toggle debug mode
-            await chrome.tabs.sendMessage(this.currentTab.id, {
-                action: 'toggleDebug',
-                enabled: this.isDebugMode
-            });
-
-            // Show feedback
-            const originalText = this.elements.debugBtn.textContent;
-            this.elements.debugBtn.textContent = this.isDebugMode 
-                ? '✅ Debug Enabled' 
-                : '❌ Debug Disabled';
-
-            setTimeout(() => {
-                this.elements.debugBtn.textContent = originalText;
-            }, 1500);
-
-        } catch (error) {
-            console.error('Error toggling debug mode:', error);
+        if (response && response.status === 'success') {
+            debugButton.textContent = !isEnabled ? '🐛 Disable Debug Mode' : '🐛 Enable Debug Mode';
         }
+    } catch (error) {
+        console.error('Failed to toggle debug mode:', error);
+        showError('Failed to toggle debug mode');
     }
+}
 
-    /**
-     * Shows the main content and hides loading state
-     */
-    showMainContent() {
-        this.elements.loading.style.display = 'none';
-        this.elements.mainContent.style.display = 'block';
-    }
-
-    /**
-     * Shows an error state when extension cannot function
-     */
-    showErrorState() {
-        this.elements.loading.innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-                <p>❌ Extension not available on this page</p>
-                <p style="font-size: 12px; opacity: 0.8;">
-                    This extension works on regular web pages but not on Chrome internal pages.
-                </p>
-            </div>
-        `;
-    }
-
-    /**
-     * Cleanup when popup is closed
-     */
-    cleanup() {
-        if (this.statusCheckInterval) {
-            clearInterval(this.statusCheckInterval);
+/**
+ * Toggles training mode
+ */
+async function toggleTrainingMode(tabId) {
+    try {
+        const response = await sendMessageToTab(tabId, { action: 'toggleTraining' });
+        
+        if (response && response.status === 'success') {
+            const trainingStatus = await getTrainingStatus(tabId);
+            updateTrainingDisplay(trainingStatus);
         }
+    } catch (error) {
+        console.error('Failed to toggle training mode:', error);
+        showError('Failed to toggle training mode');
     }
+}
+
+/**
+ * Clears training data for current site
+ */
+async function clearTrainingData(tabId) {
+    try {
+        const response = await sendMessageToTab(tabId, { action: 'clearTraining' });
+        
+        if (response && response.status === 'success') {
+            const trainingStatus = await getTrainingStatus(tabId);
+            updateTrainingDisplay(trainingStatus);
+            
+            // Refresh detection after clearing training
+            await refreshDetection(tabId);
+        }
+    } catch (error) {
+        console.error('Failed to clear training data:', error);
+        showError('Failed to clear training data');
+    }
+}
+
+/**
+ * Gets training status for current site
+ */
+async function getTrainingStatus(tabId) {
+    try {
+        const response = await sendMessageToTab(tabId, { action: 'getTrainingStatus' });
+        
+        if (response && response.status === 'success') {
+            return response.data;
+        }
+    } catch (error) {
+        console.error('Failed to get training status:', error);
+    }
+    
+    return { isActive: false, hasData: false, trainedElements: 0 };
+}
+
+/**
+ * Sends a message to the content script in the specified tab
+ */
+async function sendMessageToTab(tabId, message) {
+    return new Promise((resolve, reject) => {
+        chrome.tabs.sendMessage(tabId, message, (response) => {
+            if (chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message));
+            } else {
+                resolve(response);
+            }
+        });
+    });
+}
+
+/**
+ * Shows an error message in the popup
+ */
+function showError(message) {
+    const statusContainer = document.querySelector('.status-container');
+    statusContainer.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: #ff6b6b;">
+            <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
+            <div style="font-size: 14px;">${message}</div>
+        </div>
+    `;
 }
 
 // Enhanced content script message handler for popup communication

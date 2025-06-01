@@ -554,10 +554,445 @@ class KeyBindingManager {
     }
 }
 
+class TrainingMode {
+    constructor() {
+        this.isActive = false;
+        this.trainedElements = { previous: null, next: null };
+        this.overlay = null;
+        this.clickHandler = null;
+        this.highlightedElements = [];
+        this.debugMode = false;
+    }
+
+    /**
+     * Gets trained navigation elements for current domain
+     */
+    async getTrainedElements() {
+        try {
+            const domain = window.location.hostname;
+            const result = await chrome.storage.local.get(`training_${domain}`);
+            const trainingData = result[`training_${domain}`];
+            
+            if (trainingData) {
+                this.debugLog(`Found training data for ${domain}`);
+                
+                // Find elements using stored selectors
+                const previous = trainingData.previous ? document.querySelector(trainingData.previous.selector) : null;
+                const next = trainingData.next ? document.querySelector(trainingData.next.selector) : null;
+                
+                return { previous, next };
+            }
+        } catch (error) {
+            console.error('[Training Mode] Error loading trained elements:', error);
+        }
+        
+        return { previous: null, next: null };
+    }
+
+    /**
+     * Saves trained element to storage
+     */
+    async saveTrainedElement(element, direction) {
+        try {
+            const domain = window.location.hostname;
+            const selector = this.generateSelector(element);
+            
+            // Get existing training data
+            const result = await chrome.storage.local.get(`training_${domain}`);
+            const trainingData = result[`training_${domain}`] || {};
+            
+            // Update training data
+            trainingData[direction] = {
+                selector: selector,
+                text: element.textContent?.trim() || '',
+                timestamp: Date.now()
+            };
+            
+            // Save back to storage
+            await chrome.storage.local.set({ [`training_${domain}`]: trainingData });
+            
+            this.debugLog(`Saved ${direction} training: ${selector}`);
+            
+        } catch (error) {
+            console.error('[Training Mode] Error saving trained element:', error);
+        }
+    }
+
+    /**
+     * Clears all training data for current domain
+     */
+    async clearTrainingData() {
+        try {
+            const domain = window.location.hostname;
+            await chrome.storage.local.remove(`training_${domain}`);
+            this.debugLog(`Cleared training data for ${domain}`);
+        } catch (error) {
+            console.error('[Training Mode] Error clearing training data:', error);
+        }
+    }
+
+    /**
+     * Gets training status for current domain
+     */
+    async getTrainingStatus() {
+        try {
+            const domain = window.location.hostname;
+            const result = await chrome.storage.local.get(`training_${domain}`);
+            const trainingData = result[`training_${domain}`];
+            
+            if (trainingData) {
+                const elementCount = (trainingData.previous ? 1 : 0) + (trainingData.next ? 1 : 0);
+                return {
+                    isActive: this.isActive,
+                    hasData: true,
+                    trainedElements: elementCount
+                };
+            }
+        } catch (error) {
+            console.error('[Training Mode] Error getting training status:', error);
+        }
+        
+        return {
+            isActive: this.isActive,
+            hasData: false,
+            trainedElements: 0
+        };
+    }
+
+    /**
+     * Toggles training mode on/off
+     */
+    async toggleTrainingMode() {
+        if (this.isActive) {
+            this.exitTrainingMode();
+        } else {
+            this.enterTrainingMode();
+        }
+        
+        return this.isActive;
+    }
+
+    /**
+     * Enters training mode with visual overlay
+     */
+    enterTrainingMode() {
+        this.isActive = true;
+        this.createTrainingOverlay();
+        this.addTrainingClickHandler();
+        console.log('[Training Mode] Training mode activated');
+    }
+
+    /**
+     * Exits training mode and cleans up
+     */
+    exitTrainingMode() {
+        this.isActive = false;
+        this.removeTrainingOverlay();
+        this.removeTrainingClickHandler();
+        console.log('[Training Mode] Training mode deactivated');
+    }
+
+    /**
+     * Creates visual overlay for training mode
+     */
+    createTrainingOverlay() {
+        // Create overlay container
+        this.overlay = document.createElement('div');
+        this.overlay.id = 'side-scroller-training-overlay';
+        this.overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            z-index: 999999;
+            pointer-events: none;
+        `;
+
+        // Create info banner
+        const banner = document.createElement('div');
+        banner.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 1000000;
+            pointer-events: none;
+        `;
+        banner.textContent = '🎯 Training Mode: Click navigation arrows to train';
+
+        // Add to page
+        document.body.appendChild(this.overlay);
+        document.body.appendChild(banner);
+
+        // Highlight clickable elements
+        this.highlightClickableElements();
+    }
+
+    /**
+     * Removes training overlay
+     */
+    removeTrainingOverlay() {
+        if (this.overlay) {
+            this.overlay.remove();
+            this.overlay = null;
+        }
+
+        // Remove banner
+        const banner = document.querySelector('[style*="Training Mode"]');
+        if (banner) banner.remove();
+
+        // Remove highlights
+        this.clearHighlights();
+    }
+
+    /**
+     * Highlights clickable elements that could be navigation
+     */
+    highlightClickableElements() {
+        const clickableSelectors = [
+            'a[href]', 'button', '[onclick]', '[role="button"]',
+            '.btn', '.button', 'svg', '[class*="arrow"]',
+            '[class*="next"]', '[class*="prev"]', '[class*="nav"]'
+        ];
+
+        clickableSelectors.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(element => {
+                if (this.isElementVisible(element)) {
+                    this.addHighlight(element);
+                }
+            });
+        });
+    }
+
+    /**
+     * Adds highlight to an element
+     */
+    addHighlight(element) {
+        const highlight = document.createElement('div');
+        highlight.className = 'side-scroller-highlight';
+        
+        const rect = element.getBoundingClientRect();
+        highlight.style.cssText = `
+            position: fixed;
+            top: ${rect.top}px;
+            left: ${rect.left}px;
+            width: ${rect.width}px;
+            height: ${rect.height}px;
+            border: 2px solid #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            pointer-events: none;
+            z-index: 999998;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        `;
+
+        document.body.appendChild(highlight);
+        this.highlightedElements.push(highlight);
+    }
+
+    /**
+     * Clears all highlights
+     */
+    clearHighlights() {
+        this.highlightedElements.forEach(highlight => highlight.remove());
+        this.highlightedElements = [];
+    }
+
+    /**
+     * Adds click handler for training
+     */
+    addTrainingClickHandler() {
+        this.clickHandler = (event) => {
+            if (!this.isActive) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const element = event.target.closest('a, button, [onclick], [role="button"], svg');
+            if (element) {
+                this.handleTrainingClick(element);
+            }
+        };
+
+        document.addEventListener('click', this.clickHandler, true);
+    }
+
+    /**
+     * Removes click handler
+     */
+    removeTrainingClickHandler() {
+        if (this.clickHandler) {
+            document.removeEventListener('click', this.clickHandler, true);
+            this.clickHandler = null;
+        }
+    }
+
+    /**
+     * Handles click during training mode
+     */
+    async handleTrainingClick(element) {
+        const choice = await this.showDirectionDialog();
+        
+        if (choice) {
+            await this.saveTrainedElement(element, choice);
+            this.showTrainingFeedback(element, choice);
+        }
+    }
+
+    /**
+     * Shows dialog to choose navigation direction
+     */
+    showDirectionDialog() {
+        return new Promise((resolve) => {
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+                z-index: 1000001;
+                font-family: 'Segoe UI', sans-serif;
+                color: #333;
+                min-width: 300px;
+                text-align: center;
+            `;
+
+            dialog.innerHTML = `
+                <h3 style="margin: 0 0 15px 0; font-size: 16px;">Select Navigation Direction</h3>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                    <button id="train-previous" style="padding: 10px 20px; border: none; border-radius: 6px; background: #667eea; color: white; cursor: pointer; font-size: 14px;">← Previous</button>
+                    <button id="train-next" style="padding: 10px 20px; border: none; border-radius: 6px; background: #764ba2; color: white; cursor: pointer; font-size: 14px;">Next →</button>
+                    <button id="train-cancel" style="padding: 10px 20px; border: 1px solid #ccc; border-radius: 6px; background: white; color: #666; cursor: pointer; font-size: 14px;">Cancel</button>
+                </div>
+            `;
+
+            document.body.appendChild(dialog);
+
+            dialog.querySelector('#train-previous').onclick = () => {
+                dialog.remove();
+                resolve('previous');
+            };
+
+            dialog.querySelector('#train-next').onclick = () => {
+                dialog.remove();
+                resolve('next');
+            };
+
+            dialog.querySelector('#train-cancel').onclick = () => {
+                dialog.remove();
+                resolve(null);
+            };
+        });
+    }
+
+    /**
+     * Shows feedback after training an element
+     */
+    showTrainingFeedback(element, direction) {
+        const feedback = document.createElement('div');
+        feedback.style.cssText = `
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2ed573;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 14px;
+            z-index: 1000000;
+            animation: slideIn 0.3s ease;
+        `;
+
+        feedback.textContent = `✅ Trained as ${direction} navigation`;
+        document.body.appendChild(feedback);
+
+        setTimeout(() => feedback.remove(), 2000);
+    }
+
+    /**
+     * Generates a unique CSS selector for an element
+     */
+    generateSelector(element) {
+        const path = [];
+        let current = element;
+
+        while (current && current.nodeType === Node.ELEMENT_NODE && current !== document.body) {
+            let selector = current.tagName.toLowerCase();
+            
+            if (current.id) {
+                selector += `#${current.id}`;
+                path.unshift(selector);
+                break;
+            }
+            
+            if (current.className) {
+                const classes = current.className.trim().split(/\s+/).slice(0, 2);
+                if (classes.length > 0) {
+                    selector += '.' + classes.join('.');
+                }
+            }
+
+            const siblings = Array.from(current.parentNode?.children || []);
+            const sameTagSiblings = siblings.filter(sibling => sibling.tagName === current.tagName);
+            
+            if (sameTagSiblings.length > 1) {
+                const index = sameTagSiblings.indexOf(current) + 1;
+                selector += `:nth-of-type(${index})`;
+            }
+
+            path.unshift(selector);
+            current = current.parentNode;
+        }
+
+        return path.join(' > ');
+    }
+
+    /**
+     * Checks if element is visible
+     */
+    isElementVisible(element) {
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        
+        return style.display !== 'none' && 
+               style.visibility !== 'hidden' && 
+               style.opacity !== '0' &&
+               rect.width > 0 && 
+               rect.height > 0;
+    }
+
+    /**
+     * Debug logging utility
+     */
+    debugLog(message) {
+        if (this.debugMode) {
+            console.log(`[Training Mode Debug] ${message}`);
+        }
+    }
+}
+
 class SmartNavigationKeyBinder {
     constructor() {
         this.detector = new NavigationElementDetector();
         this.keyManager = new KeyBindingManager();
+        this.trainingMode = new TrainingMode();
         this.isInitialized = false;
         this.retryCount = 0;
         this.maxRetries = 3;
@@ -578,8 +1013,17 @@ class SmartNavigationKeyBinder {
             // Wait for page to be fully loaded
             await this.waitForPageLoad();
             
-            // Detect navigation elements
-            const navigationElements = this.detector.detectNavigationElements();
+            // Check for trained elements first
+            const trainedElements = await this.trainingMode.getTrainedElements();
+            let navigationElements;
+            
+            if (trainedElements.previous || trainedElements.next) {
+                console.log('[Side Scroller] Using trained navigation elements');
+                navigationElements = trainedElements;
+            } else {
+                // Fall back to automatic detection
+                navigationElements = this.detector.detectNavigationElements();
+            }
             
             // Bind keys to detected elements
             this.bindNavigationKeys(navigationElements);
@@ -874,6 +1318,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({ status: 'success', message: 'Debug mode toggled' });
                 break;
 
+            case 'toggleTraining':
+                toggleTrainingMode();
+                sendResponse({ status: 'success', message: 'Training mode toggled' });
+                break;
+
+            case 'getTrainingStatus':
+                getTrainingStatus().then(status => {
+                    sendResponse({ status: 'success', data: status });
+                });
+                return true; // Async response
+
+            case 'clearTraining':
+                clearTrainingData().then(() => {
+                    sendResponse({ status: 'success', message: 'Training data cleared' });
+                });
+                return true; // Async response
+
             default:
                 sendResponse({ status: 'error', message: 'Unknown action' });
         }
@@ -932,6 +1393,40 @@ function toggleDebugMode(enabled) {
             smartNavigationBinder.detector.debugMode = false;
             smartNavigationBinder.keyManager.debugMode = false;
         }
+    }
+}
+
+/**
+ * Toggles training mode
+ */
+async function toggleTrainingMode() {
+    if (typeof smartNavigationBinder !== 'undefined' && smartNavigationBinder) {
+        const isActive = await smartNavigationBinder.trainingMode.toggleTrainingMode();
+        
+        // If training mode was turned off, reinitialize to use trained elements
+        if (!isActive) {
+            smartNavigationBinder.reinitialize();
+        }
+    }
+}
+
+/**
+ * Gets training status for current site
+ */
+async function getTrainingStatus() {
+    if (typeof smartNavigationBinder !== 'undefined' && smartNavigationBinder) {
+        return await smartNavigationBinder.trainingMode.getTrainingStatus();
+    }
+    
+    return { isActive: false, hasData: false, trainedElements: 0 };
+}
+
+/**
+ * Clears training data for current site
+ */
+async function clearTrainingData() {
+    if (typeof smartNavigationBinder !== 'undefined' && smartNavigationBinder) {
+        await smartNavigationBinder.trainingMode.clearTrainingData();
     }
 }
 
