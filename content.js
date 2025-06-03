@@ -40,6 +40,14 @@ class NavigationElementDetector {
                 { pattern: /show\s+more/i, score: 12, context: 'navigation' },
                 { pattern: /view\s+more/i, score: 12, context: 'navigation' },
                 
+                // Webtoon and episode-specific patterns
+                { pattern: /next\s+episode/i, score: 22, context: 'webtoon' },
+                { pattern: /next\s+recurrence/i, score: 20, context: 'webtoon' },
+                { pattern: /\bepisode\s+\d+/i, score: 18, context: 'webtoon' },
+                { pattern: /episode\s+(\d+)/i, score: 16, context: 'webtoon' },
+                { pattern: /\bep\s+\d+/i, score: 15, context: 'webtoon' },
+                { pattern: /continue\s+reading/i, score: 14, context: 'webtoon' },
+                
                 // Arrow symbols and icons (exact match)
                 { pattern: /^→$/, score: 18, context: 'symbol' },
                 { pattern: /^▶$/, score: 18, context: 'symbol' },
@@ -65,6 +73,13 @@ class NavigationElementDetector {
                 { pattern: /previous\s+chapter/i, score: 18, context: 'navigation' },
                 { pattern: /previous\s+post/i, score: 16, context: 'navigation' },
                 { pattern: /go\s+back/i, score: 14, context: 'navigation' },
+                
+                // Webtoon and episode-specific patterns
+                { pattern: /previous\s+episode/i, score: 22, context: 'webtoon' },
+                { pattern: /prev\s+episode/i, score: 20, context: 'webtoon' },
+                { pattern: /previous\s+recurrence/i, score: 20, context: 'webtoon' },
+                { pattern: /prev\s+recurrence/i, score: 18, context: 'webtoon' },
+                { pattern: /back\s+to\s+previous/i, score: 16, context: 'webtoon' },
                 
                 // Arrow symbols and icons (exact match)
                 { pattern: /^←$/, score: 18, context: 'symbol' },
@@ -95,6 +110,15 @@ class NavigationElementDetector {
             /\bsubscribe\b/i,
             /\bunsubscribe\b/i,
             
+            // Reddit-specific creation and community actions
+            /\bcreate\s+a\s+community/i,
+            /\bcreate\s+community/i,
+            /\bcreate\s+post/i,
+            /\bjoin\s+community/i,
+            /\bleave\s+community/i,
+            /\bstart\s+community/i,
+            /\bnew\s+community/i,
+            
             // Content-related terms that aren't navigation
             /\bmore\s+info/i,
             /\bmore\s+details/i,
@@ -118,8 +142,6 @@ class NavigationElementDetector {
             // Reddit-specific false positives
             /\br\/\w+/i,        // Subreddit links like r/community
             /\bu\/\w+/i,        // User links like u/username
-            /\bjoin\s+community/i,
-            /\bcreate\s+post/i,
             /\bcross-?post/i,
             /\bx-post/i,
             
@@ -129,6 +151,13 @@ class NavigationElementDetector {
             /\blabel\b/i,
             /\bbadge\b/i,
             /\bstatus\b/i,
+            
+            // Action terms that aren't navigation
+            /\bcreate\b/i,       // Generic create actions
+            /\badd\b/i,          // Add actions
+            /\bedit\b/i,         // Edit actions
+            /\bdelete\b/i,       // Delete actions
+            /\bremove\b/i,       // Remove actions
             
             // Long text content (likely not navigation)
             /.{100,}/  // More than 100 characters is probably not a navigation button
@@ -157,28 +186,28 @@ class NavigationElementDetector {
     }
 
     /**
-     * Main detection method that finds navigation elements based on position and content
+     * Main detection method that finds navigation elements based on content analysis and intelligent scoring
      */
     detectNavigationElements() {
-        console.log('[Navigation Detector] Starting navigation element detection...');
+        console.log('[Navigation Detector] Starting content-based navigation element detection...');
         
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         const middleY = viewportHeight / 2;
         
-        // Define detection zones
-        const leftZone = { x: 0, width: viewportWidth * 0.15 }; // Far left 15%
-        const rightZone = { x: viewportWidth * 0.85, width: viewportWidth * 0.15 }; // Far right 15%
-        const verticalTolerance = viewportHeight * 0.3; // 30% tolerance around middle
+        // Define minimal zones for position bonuses only (not filtering)
+        const leftZone = { x: 0, width: viewportWidth * 0.15 }; 
+        const rightZone = { x: viewportWidth * 0.85, width: viewportWidth * 0.15 };
+        const verticalTolerance = viewportHeight * 0.3; // Base tolerance for vertical positioning
         
-        this.debugLog(`Detection zones - Left: ${leftZone.x}-${leftZone.width}, Right: ${rightZone.x}-${rightZone.x + rightZone.width}`);
-        this.debugLog(`Middle Y: ${middleY}, Tolerance: ±${verticalTolerance}`);
+        this.debugLog(`Content-first detection mode - position used only for scoring bonuses`);
+        this.debugLog(`Viewport: ${viewportWidth}x${viewportHeight}, Middle Y: ${middleY}`);
         
         // Get all clickable elements
         const clickableElements = this.getAllClickableElements();
-        this.debugLog(`Found ${clickableElements.length} clickable elements`);
+        this.debugLog(`Found ${clickableElements.length} clickable elements to analyze`);
         
-        // Filter elements by position and content
+        // Filter elements by content first, then apply position scoring
         const candidateElements = this.filterElementsByPositionAndContent(
             clickableElements, 
             leftZone, 
@@ -187,9 +216,9 @@ class NavigationElementDetector {
             verticalTolerance
         );
         
-        this.debugLog(`Found ${candidateElements.previous.length} previous candidates, ${candidateElements.next.length} next candidates`);
+        this.debugLog(`Content analysis results: ${candidateElements.previous.length} previous candidates, ${candidateElements.next.length} next candidates`);
         
-        // Select best candidates
+        // Select best candidates based on intelligent scoring
         this.detectedNavigationElements.previousPage = this.selectBestCandidate(candidateElements.previous, 'previous');
         this.detectedNavigationElements.nextPage = this.selectBestCandidate(candidateElements.next, 'next');
         
@@ -278,7 +307,7 @@ class NavigationElementDetector {
     }
 
     /**
-     * Filters elements by their position and navigation-related content
+     * Filters elements by their navigation-related content first, then uses position as tiebreaker
      */
     filterElementsByPositionAndContent(elements, leftZone, rightZone, middleY, verticalTolerance) {
         const candidates = { previous: [], next: [] };
@@ -291,76 +320,76 @@ class NavigationElementDetector {
             const elementText = this.getElementText(element);
             const navigationDirection = this.determineNavigationDirection(element, elementText);
             
-            // Debug every element that has navigation direction
-            if (navigationDirection) {
-                this.debugLog(`Found ${navigationDirection} element: "${elementText}"`);
-                this.debugLog(`Position: X=${elementCenterX.toFixed(1)}, Y=${elementCenterY.toFixed(1)}`);
-                this.debugLog(`Left zone: ${leftZone.x}-${leftZone.x + leftZone.width}, Right zone: ${rightZone.x}-${rightZone.x + rightZone.width}`);
-                this.debugLog(`Middle Y: ${middleY.toFixed(1)}, Tolerance: ±${verticalTolerance.toFixed(1)}`);
-                this.debugLog(`Vertical check: ${Math.abs(elementCenterY - middleY).toFixed(1)} <= ${verticalTolerance.toFixed(1)} = ${Math.abs(elementCenterY - middleY) <= verticalTolerance}`);
-            }
-            
-            // Check if element is in vertical middle zone
-            if (Math.abs(elementCenterY - middleY) > verticalTolerance) {
-                if (navigationDirection) {
-                    this.debugLog(`❌ ${navigationDirection} element filtered out: not in vertical middle zone`);
-                }
+            // Skip elements that aren't navigation at all
+            if (!navigationDirection) {
                 return;
             }
             
-            // Check if this is a lightbox element (more flexible positioning)
-            const isLightboxElement = this.isLightboxElement(element, elementText);
+            // Debug navigation elements found
+            this.debugLog(`Found ${navigationDirection} element: "${elementText}"`);
+            this.debugLog(`Position: X=${elementCenterX.toFixed(1)}, Y=${elementCenterY.toFixed(1)}`);
             
-            if (isLightboxElement) {
-                this.debugLog(`🎯 Lightbox element detected: "${elementText}" - using flexible positioning`);
+            // Check if element is roughly in the vertical middle area (very generous)
+            const expandedVerticalTolerance = verticalTolerance * 2; // Double tolerance - be very generous
+            if (Math.abs(elementCenterY - middleY) > expandedVerticalTolerance) {
+                this.debugLog(`❌ ${navigationDirection} element filtered out: too far from middle vertically`);
+                return;
+            }
+            
+            // Check if this is a special element type (lightbox, webtoon) - these get priority regardless of position
+            const isLightboxElement = this.isLightboxElement(element, elementText);
+            const isWebtoonElement = this.isWebtoonNavigationElement(element, elementText);
+            
+            if (isLightboxElement || isWebtoonElement) {
+                this.debugLog(`🎯 ${isLightboxElement ? 'Lightbox' : 'Webtoon'} element detected: "${elementText}" - high priority`);
                 
                 if (navigationDirection === 'previous') {
-                    this.debugLog(`✅ Previous lightbox element added: "${elementText}"`);
+                    this.debugLog(`✅ Previous ${isLightboxElement ? 'lightbox' : 'webtoon'} element added: "${elementText}"`);
                     candidates.previous.push({
                         element,
                         text: elementText,
-                        score: this.calculateElementScore(element, elementText, 'previous') + 15, // Bonus for lightbox
+                        score: this.calculateElementScore(element, elementText, 'previous') + (isWebtoonElement ? 25 : 20), // Higher bonus
                         rect,
-                        centerY: elementCenterY
+                        centerY: elementCenterY,
+                        isSpecialType: true
                     });
                 } else if (navigationDirection === 'next') {
-                    this.debugLog(`✅ Next lightbox element added: "${elementText}"`);
+                    this.debugLog(`✅ Next ${isLightboxElement ? 'lightbox' : 'webtoon'} element added: "${elementText}"`);
                     candidates.next.push({
                         element,
                         text: elementText,
-                        score: this.calculateElementScore(element, elementText, 'next') + 15, // Bonus for lightbox
+                        score: this.calculateElementScore(element, elementText, 'next') + (isWebtoonElement ? 25 : 20), // Higher bonus
                         rect,
-                        centerY: elementCenterY
+                        centerY: elementCenterY,
+                        isSpecialType: true
                     });
                 }
                 return;
             }
             
-            // Standard position-based detection for non-lightbox elements
-            if (navigationDirection === 'previous' && this.isInZone(elementCenterX, leftZone)) {
-                this.debugLog(`✅ Previous element added: "${elementText}"`);
-                candidates.previous.push({
-                    element,
-                    text: elementText,
-                    score: this.calculateElementScore(element, elementText, 'previous'),
-                    rect,
-                    centerY: elementCenterY
-                });
-            } else if (navigationDirection === 'next' && this.isInZone(elementCenterX, rightZone)) {
-                this.debugLog(`✅ Next element added: "${elementText}"`);
-                candidates.next.push({
-                    element,
-                    text: elementText,
-                    score: this.calculateElementScore(element, elementText, 'next'),
-                    rect,
-                    centerY: elementCenterY
-                });
-            } else if (navigationDirection) {
-                this.debugLog(`❌ ${navigationDirection} element filtered out: not in correct horizontal zone`);
-                if (navigationDirection === 'next') {
-                    this.debugLog(`Element X: ${elementCenterX.toFixed(1)}, Right zone starts at: ${rightZone.x.toFixed(1)}`);
-                }
+            // For regular navigation elements, add them regardless of position
+            // The scoring system will handle quality assessment
+            this.debugLog(`✅ ${navigationDirection} element added (content-based): "${elementText}"`);
+            
+            let positionBonus = 0;
+            
+            // Give small bonus for traditional positioning, but don't require it
+            if (navigationDirection === 'previous' && elementCenterX < window.innerWidth * 0.4) {
+                positionBonus = 5; // Small bonus for left-side positioning
+                this.debugLog(`  📍 Small left-position bonus: +${positionBonus}`);
+            } else if (navigationDirection === 'next' && elementCenterX > window.innerWidth * 0.6) {
+                positionBonus = 5; // Small bonus for right-side positioning  
+                this.debugLog(`  📍 Small right-position bonus: +${positionBonus}`);
             }
+            
+            candidates[navigationDirection].push({
+                element,
+                text: elementText,
+                score: this.calculateElementScore(element, elementText, navigationDirection) + positionBonus,
+                rect,
+                centerY: elementCenterY,
+                isSpecialType: false
+            });
         });
         
         return candidates;
@@ -452,6 +481,8 @@ class NavigationElementDetector {
      * Intelligent content analysis for navigation detection
      */
     analyzeNavigationContent(element, text) {
+        this.debugLog(`🔍 Analyzing navigation content: "${text}"`);
+        
         // First check for false positives - immediately exclude if found
         if (this.containsFalsePositivePatterns(text)) {
             this.debugLog(`❌ False positive detected in text: "${text}"`);
@@ -463,9 +494,26 @@ class NavigationElementDetector {
         const title = element.getAttribute('title') || '';
         const fullText = `${text} ${ariaLabel} ${title}`.toLowerCase().trim();
         
+        this.debugLog(`🔍 Full analysis text: "${fullText}"`);
+        this.debugLog(`🔍 Checking false positives against: "${fullText}"`);
+        
+        // Debug each false positive pattern
+        let falsePositiveFound = false;
+        this.falsePositivePatterns.forEach((pattern, index) => {
+            if (pattern.test(fullText)) {
+                this.debugLog(`🚫 FALSE POSITIVE MATCH #${index + 1}: Pattern ${pattern} matched "${fullText}"`);
+                falsePositiveFound = true;
+            }
+        });
+        
         // Check combined text for false positives
         if (this.containsFalsePositivePatterns(fullText)) {
             this.debugLog(`❌ False positive detected in full text: "${fullText}"`);
+            return null;
+        }
+        
+        if (falsePositiveFound) {
+            this.debugLog(`❌ FALSE POSITIVE DETECTED - Should have been excluded: "${fullText}"`);
             return null;
         }
         
@@ -480,16 +528,21 @@ class NavigationElementDetector {
         const finalNextScore = nextScore + nextPenalty;
         const finalPrevScore = prevScore + prevPenalty;
         
-        this.debugLog(`Navigation analysis for "${text}": next=${finalNextScore}, prev=${finalPrevScore}`);
+        this.debugLog(`📊 Navigation analysis for "${text}": next=${finalNextScore}, prev=${finalPrevScore}`);
+        this.debugLog(`📊 Score breakdown: nextPatterns=${nextScore}, prevPatterns=${prevScore}, penalties=${nextPenalty}/${prevPenalty}`);
         
         // Require minimum score to be considered navigation
         const minimumScore = 8;
         
         if (finalNextScore >= minimumScore && finalNextScore > finalPrevScore) {
+            this.debugLog(`✅ Classified as NEXT navigation (score: ${finalNextScore})`);
             return 'next';
         } else if (finalPrevScore >= minimumScore && finalPrevScore > finalNextScore) {
+            this.debugLog(`✅ Classified as PREVIOUS navigation (score: ${finalPrevScore})`);
             return 'previous';
         }
+        
+        this.debugLog(`❌ Scores too low or ambiguous - NOT navigation (next: ${finalNextScore}, prev: ${finalPrevScore}, min: ${minimumScore})`);
         
         // If scores are too low or too close, it's probably not navigation
         return null;
@@ -767,6 +820,16 @@ class NavigationElementDetector {
             { text: 'newer posts', expected: 'previous', context: 'Temporal navigation' },
             { text: 'older posts', expected: 'next', context: 'Temporal navigation' },
             
+            // Webtoon-specific true positives
+            { text: 'Next Episode', expected: 'next', context: 'Webtoon next episode navigation' },
+            { text: 'Previous Episode', expected: 'previous', context: 'Webtoon previous episode navigation' },
+            { text: 'Next Recurrence', expected: 'next', context: 'Webtoon next recurrence navigation' },
+            { text: 'Previous Recurrence', expected: 'previous', context: 'Webtoon previous recurrence navigation' },
+            { text: 'Episode 3', expected: 'next', context: 'Webtoon episode number' },
+            { text: 'Continue Reading', expected: 'next', context: 'Webtoon continue reading' },
+            { text: 'Prev Episode', expected: 'previous', context: 'Webtoon abbreviated previous episode' },
+            { text: 'Ep 5', expected: 'next', context: 'Webtoon abbreviated episode' },
+            
             // Edge cases
             { text: 'more', expected: null, context: 'Generic "more" without context' },
             { text: 'back', expected: 'previous', context: 'Simple back' },
@@ -852,6 +915,33 @@ class NavigationElementDetector {
         ];
         
         return lightboxIndicators.some(indicator => indicator);
+    }
+
+    /**
+     * Determines if an element is a webtoon/episode navigation element
+     */
+    isWebtoonNavigationElement(element, elementText) {
+        // Check for webtoon-specific indicators
+        const webtoonIndicators = [
+            // Aria labels
+            elementText.includes('episode'),
+            elementText.includes('next episode'),
+            elementText.includes('previous episode'),
+            elementText.includes('recurrence'),
+            
+            // SVG icons
+            elementText.includes('next-arrow'),
+            elementText.includes('prev-arrow'),
+            elementText.includes('chevron-right'),
+            elementText.includes('chevron-left'),
+            
+            // Element context
+            element.closest('[class*="webtoon"]') !== null,
+            element.closest('[class*="episode"]') !== null,
+            element.closest('[class*="recurrence"]') !== null
+        ];
+        
+        return webtoonIndicators.some(indicator => indicator);
     }
 }
 
@@ -1936,10 +2026,47 @@ function analyzeElement(element) {
     }
 }
 
+/**
+ * Quick test of false positive detection
+ * Call this from console: testFalsePositives()
+ */
+function testFalsePositives() {
+    if (typeof smartNavigationBinder !== 'undefined' && smartNavigationBinder) {
+        const detector = smartNavigationBinder.detector;
+        
+        console.log('\n🧪 Testing False Positive Detection:');
+        
+        const testTexts = [
+            'community',
+            'create a community', 
+            'r/community',
+            'join community',
+            'comments',
+            'share',
+            'upvote',
+            'next',
+            'previous',
+            'next page'
+        ];
+        
+        testTexts.forEach(text => {
+            const isFalsePositive = detector.containsFalsePositivePatterns(text.toLowerCase());
+            const result = isFalsePositive ? '❌ BLOCKED' : '✅ ALLOWED';
+            console.log(`${result} "${text}"`);
+        });
+        
+        return true;
+    } else {
+        console.log('❌ Side Scroller extension not initialized');
+        return null;
+    }
+}
+
 console.log('[Side Scroller] Content script loaded successfully');
 console.log('[Side Scroller] 🧠 Intelligent Content Analysis enabled - filters false positives like "community" on Reddit');
 console.log('[Side Scroller] 🧪 Test detection: Type "testNavigationDetection()" in console');
 console.log('[Side Scroller] 🔍 Analyze elements: Type "analyzeElement(element)" in console');
+console.log('[Side Scroller] 🚫 Test false positives: Type "testFalsePositives()" in console');
 
 /**
  * Browser UI Element Filter
