@@ -4,6 +4,12 @@
   "version": "1.2.0",
   "description": "Navigate web pages using arrow keys with intelligent detection of next/previous page elements",
   
+  "icons": {
+    "16": "icons/icon-16.svg",
+    "48": "icons/icon-48.svg",
+    "128": "icons/icon.svg"
+  },
+  
   "permissions": [
     "storage",
     "activeTab"
@@ -19,6 +25,11 @@
   
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Side Scroller"
+    "default_title": "Side Scroller",
+    "default_icon": {
+      "16": "icons/icon-16.svg",
+      "48": "icons/icon-48.svg",
+      "128": "icons/icon.svg"
+    }
   }
 } 

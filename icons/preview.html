@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Side Scroller Icons Preview</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 40px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .icon-card {
+            text-align: center;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .icon-card h3 {
+            margin: 0 0 20px 0;
+            color: #555;
+            font-size: 16px;
+        }
+        
+        .icon-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            padding: 20px;
+            background: white;
+            border-radius: 6px;
+            min-height: 80px;
+        }
+        
+        .icon-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        .usage-section {
+            margin-top: 40px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .usage-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .toolbar-preview {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: #333;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        
+        .toolbar-preview span {
+            color: white;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Side Scroller Extension Icons</h1>
+        
+        <div class="icon-grid">
+            <div class="icon-card">
+                <h3>16×16 Toolbar Icon</h3>
+                <div class="icon-display">
+                    <img src="icon-16.svg" width="16" height="16" alt="16x16 icon">
+                </div>
+                <div class="icon-info">
+                    Used in browser toolbar and extension list
+                </div>
+            </div>
+            
+            <div class="icon-card">
+                <h3>48×48 Management Icon</h3>
+                <div class="icon-display">
+                    <img src="icon-48.svg" width="48" height="48" alt="48x48 icon">
+                </div>
+                <div class="icon-info">
+                    Used in extensions management page
+                </div>
+            </div>
+            
+            <div class="icon-card">
+                <h3>128×128 Store Icon</h3>
+                <div class="icon-display">
+                    <img src="icon.svg" width="128" height="128" alt="128x128 icon">
+                </div>
+                <div class="icon-info">
+                    Used in Chrome Web Store and installation
+                </div>
+            </div>
+        </div>
+        
+        <div class="usage-section">
+            <h3>📋 Usage Context</h3>
+            <p><strong>Design Concept:</strong> Clean left and right navigation arrows on a modern gradient background, representing the core functionality of keyboard navigation.</p>
+            
+            <div class="toolbar-preview">
+                <img src="icon-16.svg" width="16" height="16" alt="toolbar icon">
+                <span>Side Scroller</span>
+            </div>
+            
+            <p><strong>Color Scheme:</strong></p>
+            <ul>
+                <li><strong>Primary Gradient:</strong> #667eea → #764ba2 (matches extension UI)</li>
+                <li><strong>Arrows:</strong> White with slight transparency for elegance</li>
+                <li><strong>Effects:</strong> Subtle shadows and highlights for depth</li>
+            </ul>
+            
+            <p><strong>Features:</strong></p>
+            <ul>
+                <li>✅ <strong>Scalable SVG format</strong> - Crisp at all sizes</li>
+                <li>✅ <strong>Professional gradient</strong> - Matches extension branding</li>
+                <li>✅ <strong>Clear symbolism</strong> - Instantly recognizable navigation arrows</li>
+                <li>✅ <strong>Optimized sizing</strong> - Different designs for 16px vs 128px</li>
+                <li>✅ <strong>Browser compliant</strong> - Follows extension icon standards</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html> 
