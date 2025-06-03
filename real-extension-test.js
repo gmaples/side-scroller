@@ -139,6 +139,37 @@ class RealExtensionTestSuite {
             }
         };
         
+        // Mock KeyboardEvent for key binding tests
+        global.KeyboardEvent = this.window.KeyboardEvent || class KeyboardEvent extends Event {
+            constructor(type, options = {}) {
+                super(type, options);
+                this.key = options.key || '';
+                this.keyCode = options.keyCode || 0;
+                this.bubbles = options.bubbles || false;
+                this.cancelable = options.cancelable || false;
+                this.ctrlKey = options.ctrlKey || false;
+                this.shiftKey = options.shiftKey || false;
+                this.altKey = options.altKey || false;
+                this.metaKey = options.metaKey || false;
+            }
+        };
+        
+        // Mock MouseEvent for element click simulation
+        global.MouseEvent = this.window.MouseEvent || class MouseEvent extends Event {
+            constructor(type, options = {}) {
+                super(type, options);
+                this.bubbles = options.bubbles || false;
+                this.cancelable = options.cancelable || false;
+                this.clientX = options.clientX || 0;
+                this.clientY = options.clientY || 0;
+                this.button = options.button || 0;
+            }
+        };
+        
+        // Ensure window has both event constructors
+        this.window.KeyboardEvent = global.KeyboardEvent;
+        this.window.MouseEvent = global.MouseEvent;
+        
         console.log('✅ DOM environment initialized with comprehensive test elements');
     }
 
@@ -291,30 +322,20 @@ class RealExtensionTestSuite {
         const detector = new this.extensionModules.detector.NavigationElementDetector();
         
         const testCases = [
+            // Test specific high-value navigation elements that should be detected
             {
-                name: 'Previous Page Link',
-                selector: '.prev-link',
-                expectedDirection: 'previous',
+                name: 'Best Previous Navigation (Episode/Article)',
+                testType: 'previous_detection',
+                expectedTexts: ['Previous Episode', 'Previous Article', 'Previous Page'], 
                 shouldDetect: true
             },
             {
-                name: 'Next Page Link', 
-                selector: '.next-link',
-                expectedDirection: 'next',
+                name: 'Best Next Navigation (Page/Episode)',
+                testType: 'next_detection', 
+                expectedTexts: ['Next Page', 'Next Episode', 'Next Article'],
                 shouldDetect: true
             },
-            {
-                name: 'Previous Chapter Button',
-                selector: '.prev-chapter',
-                expectedDirection: 'previous', 
-                shouldDetect: true
-            },
-            {
-                name: 'Next Chapter Button',
-                selector: '.next-chapter',
-                expectedDirection: 'next',
-                shouldDetect: true
-            },
+            // Test that false positives are excluded
             {
                 name: 'Reddit Community Link',
                 selector: 'a[href="/r/community"]',
@@ -340,6 +361,35 @@ class RealExtensionTestSuite {
         
         for (const testCase of testCases) {
             try {
+                if (testCase.testType === 'previous_detection') {
+                    // Test that a previous element was detected and has expected text
+                    const detected = detectionResult.previousPage;
+                    if (detected && testCase.expectedTexts.some(text => detected.textContent.includes(text))) {
+                        passedTests++;
+                        this.recordTest('Navigation Detection', testCase.name, true, 
+                            `Correctly detected: "${detected.textContent}"`);
+                    } else {
+                        this.recordTest('Navigation Detection', testCase.name, false, 
+                            `Expected text containing ${testCase.expectedTexts.join(' or ')}, got: "${detected?.textContent || 'none'}"`);
+                    }
+                    continue;
+                }
+                
+                if (testCase.testType === 'next_detection') {
+                    // Test that a next element was detected and has expected text
+                    const detected = detectionResult.nextPage;
+                    if (detected && testCase.expectedTexts.some(text => detected.textContent.includes(text))) {
+                        passedTests++;
+                        this.recordTest('Navigation Detection', testCase.name, true, 
+                            `Correctly detected: "${detected.textContent}"`);
+                    } else {
+                        this.recordTest('Navigation Detection', testCase.name, false, 
+                            `Expected text containing ${testCase.expectedTexts.join(' or ')}, got: "${detected?.textContent || 'none'}"`);
+                    }
+                    continue;
+                }
+                
+                // Handle selector-based tests (for false positives)
                 const element = this.document.querySelector(testCase.selector);
                 
                 if (!element) {

@@ -12,6 +12,8 @@ import {
     SCORING_CONFIG
 } from './patterns.js';
 
+import { BrowserUIElementFilter } from './browser-ui-filter.js';
+
 import {
     NavigationTestingUtils,
     NavigationTypeDetector,
@@ -34,23 +36,17 @@ export class NavigationElementDetector {
         
         this.debugMode = false;
         
-        // Initialize browser UI filter lazily to avoid initialization order issues
-        this._browserUIFilter = null;
+        // Initialize browser UI filter synchronously now that we have proper import
+        this._browserUIFilter = new BrowserUIElementFilter();
         
         // Initialize testing utilities
         this.testingUtils = new NavigationTestingUtils(this);
     }
     
     /**
-     * Lazy initialization of BrowserUIElementFilter to avoid class ordering issues
+     * Synchronous getter for BrowserUIElementFilter
      */
     get browserUIFilter() {
-        if (!this._browserUIFilter) {
-            // Dynamic import to avoid circular dependency
-            import('./browser-ui-filter.js').then(module => {
-                this._browserUIFilter = new module.BrowserUIElementFilter();
-            });
-        }
         return this._browserUIFilter;
     }
 

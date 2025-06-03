@@ -20,6 +20,12 @@ async function debugNavigationDetection() {
             <a href="/page-3" class="next-link">Next Page →</a>
             <button class="prev-chapter">Previous Chapter</button>
             <button class="next-chapter">Next Chapter</button>
+            
+            <!-- BROWSER UI ELEMENTS (should be filtered) -->
+            <div style="position: fixed; top: 5px; left: 5px; z-index: 2147483647;">
+                <button class="chrome-back" aria-label="Back to previous page">⬅ Back</button>
+                <button class="chrome-forward" aria-label="Forward to next page">➡ Forward</button>
+            </div>
         </body>
         </html>
     `;
@@ -67,7 +73,8 @@ async function debugNavigationDetection() {
             { selector: '.prev-link', expected: 'previous' },
             { selector: '.next-link', expected: 'next' }, 
             { selector: '.prev-chapter', expected: 'previous' },
-            { selector: '.next-chapter', expected: 'next' }
+            { selector: '.next-chapter', expected: 'next' },
+            { selector: '.chrome-back', expected: null } // Should NOT be detected
         ];
         
         const filter = new browserUI.BrowserUIElementFilter();

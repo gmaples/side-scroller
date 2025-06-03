@@ -40,7 +40,7 @@ export class BrowserUIElementFilter {
         if (isTestEnvironment) {
             this.debugLog(`🧪 Test environment detected - using lenient filtering for: ${this.getElementDescription(element)}`);
             
-            // In test environments, only apply the most critical filters
+            // In test environments, still apply ALL critical filters including browser navigation
             const selectorExclusion = this.checkSelectorBasedExclusions(element);
             if (selectorExclusion) {
                 exclusionReasons.push(selectorExclusion);
@@ -56,9 +56,23 @@ export class BrowserUIElementFilter {
                 exclusionReasons.push(zIndexExclusion);
             }
             
+            // CRITICAL: Always check browser navigation exclusions even in test mode
             const browserNavExclusion = this.checkBrowserNavigationExclusions(element);
             if (browserNavExclusion) {
                 exclusionReasons.push(browserNavExclusion);
+            }
+            
+            // Also check if element has extremely high z-index indicating browser UI
+            const style = window.getComputedStyle(element);
+            const zIndex = parseInt(style.zIndex) || 0;
+            if (zIndex >= 2147483647) {  // Maximum z-index typically used by browser UI
+                exclusionReasons.push('maximum-z-index-browser-ui');
+            }
+            
+            // IMPORTANT: Check for explicitly tiny elements in test environment using CSS styles
+            const testSizeExclusion = this.checkTestEnvironmentSizeExclusions(element);
+            if (testSizeExclusion) {
+                exclusionReasons.push(testSizeExclusion);
             }
             
             if (exclusionReasons.length > 0) {
@@ -391,5 +405,42 @@ export class BrowserUIElementFilter {
             browserNavCheck: this.checkBrowserNavigationExclusions(element),
             elementDescription: this.getElementDescription(element)
         };
+    }
+
+    /**
+     * Check for size exclusions in test environments using CSS styles
+     */
+    checkTestEnvironmentSizeExclusions(element) {
+        // In test environments, check the style attribute for explicit dimensions
+        const style = element.getAttribute('style') || '';
+        
+        if (style) {
+            // Extract width and height from style attribute
+            const widthMatch = style.match(/width\s*:\s*(\d+)px/);
+            const heightMatch = style.match(/height\s*:\s*(\d+)px/);
+            
+            if (widthMatch && heightMatch) {
+                const width = parseInt(widthMatch[1]);
+                const height = parseInt(heightMatch[1]);
+                const area = width * height;
+                
+                // Apply same size constraints as normal filtering
+                if (width < this.validElementSizeConstraints.minWidth || 
+                    height < this.validElementSizeConstraints.minHeight) {
+                    return `test-env-too-small: ${width}x${height}`;
+                }
+                
+                if (width > this.validElementSizeConstraints.maxWidth || 
+                    height > this.validElementSizeConstraints.maxHeight) {
+                    return `test-env-too-large: ${width}x${height}`;
+                }
+                
+                if (area < this.validElementSizeConstraints.minClickableArea) {
+                    return `test-env-insufficient-area: ${area}px²`;
+                }
+            }
+        }
+        
+        return null;
     }
 } 
