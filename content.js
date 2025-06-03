@@ -1796,6 +1796,15 @@ class SmartNavigationKeyBinder {
         this.trainingMode.debugMode = false;
         console.log('[Side Scroller] Debug mode disabled for all components');
     }
+
+    /**
+     * Debug logging utility
+     */
+    debugLog(message) {
+        if (this.debugMode) {
+            console.log(`[SmartNavigationKeyBinder] ${message}`);
+        }
+    }
 }
 
 // Global instance
