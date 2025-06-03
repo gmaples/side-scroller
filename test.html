@@ -484,15 +484,131 @@
             }
         }
 
+        // Extension Loading Test - Add this right after the existing status monitoring
+        function testExtensionLoading() {
+            const loadingTests = [
+                {
+                    name: 'ES6 Module Support',
+                    test: () => typeof window.smartNavigationBinder !== 'undefined',
+                    description: 'Checks if ES6 modules loaded correctly'
+                },
+                {
+                    name: 'Navigation Detector',
+                    test: () => window.smartNavigationBinder && window.smartNavigationBinder.detector,
+                    description: 'Verifies NavigationElementDetector is available'
+                },
+                {
+                    name: 'Key Manager',
+                    test: () => window.smartNavigationBinder && window.smartNavigationBinder.keyManager,
+                    description: 'Verifies KeyBindingManager is available'
+                },
+                {
+                    name: 'Training Mode',
+                    test: () => window.smartNavigationBinder && window.smartNavigationBinder.trainingMode,
+                    description: 'Verifies TrainingMode is available'
+                },
+                {
+                    name: 'Browser UI Filter',
+                    test: () => window.smartNavigationBinder && window.smartNavigationBinder.detector && window.smartNavigationBinder.detector.browserUIFilter,
+                    description: 'Verifies BrowserUIElementFilter is available'
+                },
+                {
+                    name: 'Global Test Functions',
+                    test: () => typeof window.testNavigationDetection === 'function' && typeof window.analyzeElement === 'function',
+                    description: 'Verifies console test functions are exposed'
+                }
+            ];
+
+            console.log('🧪 Running Extension Loading Tests...');
+            
+            let passedTests = 0;
+            loadingTests.forEach((test, index) => {
+                try {
+                    const result = test.test();
+                    if (result) {
+                        console.log(`✅ Test ${index + 1}: ${test.name} - PASSED`);
+                        addLog(`✅ ${test.name}: ${test.description}`, 'success');
+                        passedTests++;
+                    } else {
+                        console.log(`❌ Test ${index + 1}: ${test.name} - FAILED`);
+                        addLog(`❌ ${test.name}: ${test.description}`, 'error');
+                    }
+                } catch (error) {
+                    console.log(`❌ Test ${index + 1}: ${test.name} - ERROR: ${error.message}`);
+                    addLog(`❌ ${test.name}: Error - ${error.message}`, 'error');
+                }
+            });
+
+            const allPassed = passedTests === loadingTests.length;
+            addLog(`Extension Loading Tests: ${passedTests}/${loadingTests.length} passed ${allPassed ? '🎉' : '⚠️'}`, allPassed ? 'success' : 'error');
+            
+            return allPassed;
+        }
+
+        // Module Loading Diagnostic
+        function diagnoseModuleLoading() {
+            console.log('🔍 Diagnosing Module Loading...');
+            
+            // Check if content script loaded
+            const contentScriptLoaded = document.querySelector('script[src*="content.js"]') || 
+                                      typeof window.smartNavigationBinder !== 'undefined';
+            addLog(`Content Script Detection: ${contentScriptLoaded ? 'Found' : 'Not Found'}`, contentScriptLoaded ? 'success' : 'error');
+            
+            // Check for ES6 import errors
+            const hasImportErrors = window.console && window.console.error && 
+                                   window.console.error.toString().includes('import');
+            addLog(`ES6 Import Errors: ${hasImportErrors ? 'Detected' : 'None'}`, hasImportErrors ? 'error' : 'success');
+            
+            // Check manifest configuration
+            const isExtensionContext = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
+            addLog(`Extension Context: ${isExtensionContext ? 'Active' : 'Inactive'}`, isExtensionContext ? 'success' : 'info');
+            
+            return {
+                contentScriptLoaded,
+                hasImportErrors: !hasImportErrors,
+                isExtensionContext
+            };
+        }
+
+        // Enhanced status monitoring with module testing
+        function enhancedStatusCheck() {
+            checkExtensionStatus();
+            
+            if (window.smartNavigationBinder) {
+                const testResult = testExtensionLoading();
+                if (testResult) {
+                    addLog('🎉 All extension modules loaded successfully!', 'success');
+                    
+                    // Run a quick navigation detection test
+                    if (typeof window.testNavigationDetection === 'function') {
+                        try {
+                            const detectionResult = window.testNavigationDetection();
+                            if (detectionResult) {
+                                addLog('🧠 Navigation detection test completed successfully', 'success');
+                            }
+                        } catch (error) {
+                            addLog(`Navigation detection test failed: ${error.message}`, 'error');
+                        }
+                    }
+                }
+            } else {
+                // Run diagnostics if extension not loaded
+                const diagnostics = diagnoseModuleLoading();
+                if (!diagnostics.contentScriptLoaded && !diagnostics.isExtensionContext) {
+                    addLog('💡 Tip: Load this page as a Chrome extension to test functionality', 'info');
+                }
+            }
+        }
+
         // Initialize test page
         document.addEventListener('DOMContentLoaded', function() {
             addLog('Test page loaded successfully', 'success');
             
             // Check for extension periodically
-            setInterval(checkExtensionStatus, 2000);
+            setInterval(enhancedStatusCheck, 2000);
             
             // Initial status check
-            setTimeout(checkExtensionStatus, 1000);
+            setTimeout(enhancedStatusCheck, 1000);
             
             addLog('Status monitoring started', 'info');
         });
