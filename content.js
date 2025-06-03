@@ -181,8 +181,18 @@ class NavigationElementDetector {
         
         this.debugMode = false;
         
-        // Initialize browser UI filter to exclude browser controls
-        this.browserUIFilter = new BrowserUIElementFilter();
+        // Initialize browser UI filter lazily to avoid initialization order issues
+        this._browserUIFilter = null;
+    }
+    
+    /**
+     * Lazy initialization of BrowserUIElementFilter to avoid class ordering issues
+     */
+    get browserUIFilter() {
+        if (!this._browserUIFilter) {
+            this._browserUIFilter = new BrowserUIElementFilter();
+        }
+        return this._browserUIFilter;
     }
 
     /**
