@@ -11,30 +11,49 @@
  * - smart-navigation-binder.js: SmartNavigationKeyBinder and global functions
  */
 
-import {
-    setupEventHandlers,
-    setupMessageHandlers,
-    exposeGlobalFunctions,
-    testNavigationDetection,
-    analyzeElement,
-    testFalsePositives
-} from './smart-navigation-binder.js';
+// Use dynamic imports for Chrome extension compatibility
+async function initializeSideScroller() {
+    try {
+        console.log('[Side Scroller] Loading modular components...');
+        
+        // Dynamic import for Chrome extension compatibility
+        const {
+            setupEventHandlers,
+            setupMessageHandlers,
+            exposeGlobalFunctions,
+            testNavigationDetection,
+            analyzeElement,
+            testFalsePositives
+        } = await import('./smart-navigation-binder.js');
 
-// Initialize all event handlers
-setupEventHandlers();
+        // Initialize all event handlers
+        setupEventHandlers();
 
-// Setup message handlers for popup communication
-setupMessageHandlers();
+        // Setup message handlers for popup communication
+        setupMessageHandlers();
 
-// Expose global functions for console debugging
-exposeGlobalFunctions();
+        // Expose global functions for console debugging
+        exposeGlobalFunctions();
 
-// Extension logging
-console.log('[Side Scroller] Modular content script loaded successfully');
-console.log('[Side Scroller] 🧠 Intelligent Content Analysis enabled - filters false positives like "community" on Reddit');
-console.log('[Side Scroller] 🧪 Test detection: Type "testNavigationDetection()" in console');
-console.log('[Side Scroller] 🔍 Analyze elements: Type "analyzeElement(element)" in console');
-console.log('[Side Scroller] 🚫 Test false positives: Type "testFalsePositives()" in console');
+        // Extension logging
+        console.log('[Side Scroller] Modular content script loaded successfully');
+        console.log('[Side Scroller] 🧠 Intelligent Content Analysis enabled - filters false positives like "community" on Reddit');
+        console.log('[Side Scroller] 🧪 Test detection: Type "testNavigationDetection()" in console');
+        console.log('[Side Scroller] 🔍 Analyze elements: Type "analyzeElement(element)" in console');
+        console.log('[Side Scroller] 🚫 Test false positives: Type "testFalsePositives()" in console');
+        
+    } catch (error) {
+        console.error('[Side Scroller] Failed to load modules:', error);
+        console.error('[Side Scroller] Extension will not function properly');
+    }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSideScroller);
+} else {
+    initializeSideScroller();
+}
 
 /*
  * REFACTORING COMPLETE ✅
