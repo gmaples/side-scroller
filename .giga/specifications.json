@@ -1,0 +1,18 @@
+[
+  {
+    "fileName": "main-overview.mdc",
+    "description": "Complete system overview documenting the extension's architecture, key components, and high-level functionality including content analysis, navigation detection, and UI management"
+  },
+  {
+    "fileName": "navigation-detection-algorithms.mdc",
+    "description": "Detailed documentation of the core navigation detection algorithms including pattern recognition, scoring system, filtering mechanisms, and element analysis logic"
+  },
+  {
+    "fileName": "ui-filtering-algorithms.mdc",
+    "description": "Comprehensive documentation of browser UI filtering algorithms including position-based exclusions, selector-based filtering, and size constraints implementation"
+  },
+  {
+    "fileName": "component-data-flow.mdc",
+    "description": "Documentation of data flow between extension components including popup interface, content scripts, and message passing mechanisms"
+  }
+]
